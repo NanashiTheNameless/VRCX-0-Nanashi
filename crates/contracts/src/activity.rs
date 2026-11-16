@@ -71,6 +71,8 @@ activity_kinds! {
     SafetyUrl => "SafetyUrl",
     // Fork: assistant-created reminders (upstream #479).
     Reminder => "Reminder",
+    // Fork: free VRChat store items found by the opt-in check.
+    FreeStoreItem => "FreeStoreItem",
 }
 
 impl ActivityKind {

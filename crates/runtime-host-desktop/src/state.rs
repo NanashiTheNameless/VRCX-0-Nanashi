@@ -1358,6 +1358,23 @@ impl DesktopRuntimeHostState {
         )
     }
 
+    /// Fork: the opt-in free store item check found items. Delivered like
+    /// any other activity, so each notification channel's filter applies.
+    pub fn notify_free_store_items(&self, names: &[String]) {
+        if names.is_empty() {
+            return;
+        }
+        let created_at = vrcx_0_core::time::now_epoch();
+        let mut event = vrcx_0_contracts::activity::ActivityEvent::new(
+            vrcx_0_contracts::activity::ActivityKind::FreeStoreItem,
+            format!("free-store-item:{created_at}:{}", names.join(",")),
+            created_at,
+        );
+        event.facts.title = "Free store items".to_string();
+        event.facts.message = names.join(", ");
+        self.desktop.services.activity_router().ingest(event);
+    }
+
     pub fn send_test_notification(&self, message: &str) {
         self.desktop
             .services

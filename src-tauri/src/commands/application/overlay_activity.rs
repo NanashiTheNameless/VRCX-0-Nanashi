@@ -23,6 +23,20 @@ pub fn app__notification_activity_filters_get(
     state.runtime_host().notification_activity_filter_profiles()
 }
 
+/// Fork: free store items the opt-in check found, sent to the notification
+/// channels. Only item names are passed.
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__free_store_items_notify(state: State<'_, AppState>, names: Vec<String>) {
+    let names: Vec<String> = names
+        .into_iter()
+        .map(|name| name.trim().chars().take(100).collect::<String>())
+        .filter(|name| !name.is_empty())
+        .take(20)
+        .collect();
+    state.runtime_host().notify_free_store_items(&names);
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub fn app__notification_test_send(state: State<'_, AppState>, message: String) {

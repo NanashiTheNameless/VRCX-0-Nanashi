@@ -1,3 +1,4 @@
+import { commands } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
 import vrchatEconomyRepository, {
     ownedFromPurchases,
@@ -147,7 +148,8 @@ function offeredIds(userId: string): Set<string> {
 /** Returns how many items were offered. */
 export async function checkFreeStoreItems(
     userId: string,
-    shownIds: Set<string>
+    shownIds: Set<string>,
+    { notify = false }: { notify?: boolean } = {}
 ): Promise<number> {
     const [shelves, purchases, failedIds] = await Promise.all([
         Promise.all(
@@ -172,15 +174,25 @@ export async function checkFreeStoreItems(
     }
     if (listings.length > 0) {
         // VRChat writes some characters in names as look-alike symbols.
-        useFreeStoreItemStore.getState().show(
-            listings.map((listing) => ({
-                ...listing,
-                displayName:
-                    typeof listing.displayName === 'string'
-                        ? replaceBioSymbols(listing.displayName)
-                        : listing.displayName
-            }))
-        );
+        const shown = listings.map((listing) => ({
+            ...listing,
+            displayName:
+                typeof listing.displayName === 'string'
+                    ? replaceBioSymbols(listing.displayName)
+                    : listing.displayName
+        }));
+        useFreeStoreItemStore.getState().show(shown);
+        if (notify) {
+            // Also through the normal notification channels, so it is seen
+            // while the app is minimized or the player is in VR.
+            void commands
+                .appFreeStoreItemsNotify(
+                    shown.map(
+                        (listing) => listing.displayName || listing.id || ''
+                    )
+                )
+                .catch(() => {});
+        }
     }
     return listings.length;
 }
@@ -206,9 +218,11 @@ export function checkFreeStoreItemsNow(userId: string): Promise<number> {
 export function startFreeStoreItemWatch(userId: string) {
     const shownIds = offeredIds(userId);
     const check = () => {
-        checkFreeStoreItems(userId, shownIds).catch((error: unknown) => {
-            console.warn('Failed to check free store items:', error);
-        });
+        checkFreeStoreItems(userId, shownIds, { notify: true }).catch(
+            (error: unknown) => {
+                console.warn('Failed to check free store items:', error);
+            }
+        );
     };
     let interval: ReturnType<typeof setInterval> | null = null;
     const timeout = setTimeout(() => {

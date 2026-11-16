@@ -7941,7 +7941,8 @@
                 "SafetyAvatar": "Watched avatar",
                 "SafetyCommunity": "Community list match",
                 "SafetyUrl": "Suspicious URL",
-                "Reminder": "Assistant reminder"
+                "Reminder": "Assistant reminder",
+                "FreeStoreItem": "Free store items"
             },
             "favorite_groups": {
                 "menu_label": "Favorite groups",

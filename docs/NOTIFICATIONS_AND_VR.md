@@ -60,7 +60,10 @@ filters but respects each channel's switch, condition and Do Not Disturb.
 
 **Free Store Items** (Notifications > In-App Indicators) is off by default. When on, the app
 checks VRChat's store a minute after you sign in and then every 3 hours, compares it with your
-purchases, and shows a window listing free items you do not own yet. **Claim All** adds them to
+purchases, and shows a window listing free items you do not own yet. It also sends a normal
+notification (**Free store items**) through your notification channels, so you see it while the
+app is minimized or you are in VR; turn it off per channel in each channel's filters like any
+other notification type. **Claim All** adds them to
 your account; nothing is claimed before that. Items VRChat refuses are not offered again, and
 **Don't check for free items again** turns the setting off. **Check now**, next to the switch,
 looks once right away, even while the setting is off, and lists every free item you do not own

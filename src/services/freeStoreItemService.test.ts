@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     shelves: vi.fn(),
-    purchases: vi.fn()
+    purchases: vi.fn(),
+    notify: vi.fn().mockResolvedValue(null)
 }));
 
 vi.mock('@/repositories/vrchatEconomyRepository', async (importOriginal) => {
@@ -19,6 +20,10 @@ vi.mock('@/repositories/vrchatEconomyRepository', async (importOriginal) => {
         }
     };
 });
+
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: { appFreeStoreItemsNotify: mocks.notify }
+}));
 
 vi.mock('@/repositories/configRepository', () => ({
     default: {
@@ -117,6 +122,7 @@ describe('checkFreeStoreItemsNow', () => {
         mocks.shelves.mockReset();
         mocks.purchases.mockReset();
         mocks.purchases.mockResolvedValue([]);
+        mocks.notify.mockClear();
         useFreeStoreItemStore.setState({ open: false, listings: [] });
     });
 
@@ -133,6 +139,26 @@ describe('checkFreeStoreItemsNow', () => {
 
         expect(await checkFreeStoreItemsNow('usr_now')).toBe(1);
         expect(useFreeStoreItemStore.getState().listings).toHaveLength(1);
+        // Only the automatic check notifies; Check now just opens the window.
+        expect(mocks.notify).not.toHaveBeenCalled();
+    });
+
+    it('sends what the automatic check found to the notification channels', async () => {
+        mocks.notify.mockClear();
+        mocks.shelves.mockImplementation(async (storeId: string) =>
+            storeId.endsWith('0')
+                ? [
+                      {
+                          id: 'free',
+                          displayName: 'Free Hat',
+                          active: true,
+                          priceTokens: 0
+                      }
+                  ]
+                : []
+        );
+        await checkFreeStoreItems('usr_notify', new Set(), { notify: true });
+        expect(mocks.notify).toHaveBeenCalledWith(['Free Hat']);
     });
 
     it('skips items already in the open window', async () => {

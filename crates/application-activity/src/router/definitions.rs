@@ -237,9 +237,14 @@ pub(super) fn definition(kind: ActivityKind) -> KindDefinition {
             S::Off,
             S::Off,
         ),
-        // Fork: safety watchlist hits and assistant reminders stay on for
-        // every local surface, matching the pre-rewrite per-surface defaults.
-        K::SafetyGroup | K::SafetyAvatar | K::SafetyCommunity | K::SafetyUrl | K::Reminder => (
+        // Fork: safety watchlist hits, assistant reminders and free store
+        // items (a check the user turned on) stay on for every local surface.
+        K::SafetyGroup
+        | K::SafetyAvatar
+        | K::SafetyCommunity
+        | K::SafetyUrl
+        | K::Reminder
+        | K::FreeStoreItem => (
             C::SystemSafety,
             BOOLEAN_SCOPES,
             S::On,

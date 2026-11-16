@@ -105,6 +105,7 @@ fn safety_and_reminders_keep_all_local_notification_defaults_enabled() {
         ActivityKind::SafetyCommunity,
         ActivityKind::SafetyUrl,
         ActivityKind::Reminder,
+        ActivityKind::FreeStoreItem,
     ] {
         for surface in [
             NotificationSurface::Wrist,

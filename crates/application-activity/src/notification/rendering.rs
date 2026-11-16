@@ -72,7 +72,9 @@ fn combine_text(kind: ActivityKind, title: &str, body: &str) -> String {
         | ActivityKind::InstanceClosed
         | ActivityKind::Event
         | ActivityKind::External => body.to_string(),
-        ActivityKind::GroupChange | ActivityKind::VideoPlay => format!("{title}: {body}"),
+        ActivityKind::GroupChange | ActivityKind::VideoPlay | ActivityKind::FreeStoreItem => {
+            format!("{title}: {body}")
+        }
         ActivityKind::BlockedOnPlayerJoined
         | ActivityKind::BlockedOnPlayerLeft
         | ActivityKind::MutedOnPlayerJoined

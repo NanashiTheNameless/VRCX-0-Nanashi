@@ -343,6 +343,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::overlay_activity::app__notification_activity_filters_get,
             commands::application::overlay_activity::app__notification_activity_filters_set,
             commands::application::overlay_activity::app__notification_test_send,
+            commands::application::overlay_activity::app__free_store_items_notify,
             commands::application::presence_automation::app__presence_automation_rules_get,
             commands::application::presence_automation::app__presence_automation_rules_set,
             commands::application::presence_automation::app__presence_automation_rule_enabled_set,

@@ -206,8 +206,9 @@ are not read from the file, and a file that is not one of these databases is ref
   optionally an image) to everyone there.
 - **VRChat Announcements** (Tools > Other): VRChat's help articles and in-game banners.
 - **Free store items** (Settings > Notifications > In-App Indicators), off by default: checks
-  the VRChat store every 3 hours and offers to claim free items you do not own yet. Nothing is
-  claimed until you choose **Claim All**.
+  the VRChat store every 3 hours, notifies you through your notification channels, and offers
+  to claim free items you do not own yet. **Check now** looks right away. Nothing is claimed
+  until you choose **Claim All**.
 
 ## AI Assistant and reminders
 

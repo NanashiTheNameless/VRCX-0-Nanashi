@@ -31,7 +31,7 @@ pub(super) fn build_activity_content(event: &ActivityEvent) -> ActivityContent {
             facts.title.trim(),
             literal_body(facts.message.trim()),
         ),
-        ActivityKind::Reminder => titled_body(
+        ActivityKind::Reminder | ActivityKind::FreeStoreItem => titled_body(
             "bell",
             facts.title.trim(),
             literal_body(facts.message.trim()),
