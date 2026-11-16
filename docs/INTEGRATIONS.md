@@ -58,6 +58,36 @@ player list, language tags and notes. **Allow LAN connections** lets other devic
 network read it; keep it off on untrusted networks. The token gives access to whatever is
 shared, so give it only to software you trust.
 
+Turn it on under Settings > Integrations > Integration API, where the access token is shown.
+
+### Connecting
+
+Every request needs the access token, sent as an `Authorization: Bearer <token>` header.
+Browsers cannot set that header on a WebSocket, so they can instead request the subprotocols
+`vrcx0.integration.v1` and `vrcx0.integration.token.<token>`.
+
+| Endpoint                              | Description                             |
+| ------------------------------------- | --------------------------------------- |
+| `GET http://127.0.0.1:8799/v1/health` | Returns `{ "ok": true, "protocol": 1 }` |
+| `ws://127.0.0.1:8799/v1/stream`       | The event stream                        |
+
+### Messages
+
+All messages are JSON with a `type` field. Every message except `bye` carries an increasing
+`seq`, and timestamps are ISO 8601 in UTC.
+
+| `type`          | When                                                                                                 | Content                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `hello`         | Right after connecting                                                                               | `protocol`, `app`, `appVersion`, `scopes`, `heartbeatSec`                                                                 |
+| `room.snapshot` | After `hello`, when you change instance, and whenever the stream resyncs; replaces all earlier state | `room`: `location`, `worldId`, `worldName`, `destination`, `enteredAt`, `members`; `null` when you are not in an instance |
+| `room.joined`   | Players join                                                                                         | `members`                                                                                                                 |
+| `room.left`     | Players leave                                                                                        | `userIds`                                                                                                                 |
+| `ping`          | Every `heartbeatSec` seconds (20)                                                                    | none                                                                                                                      |
+| `bye`           | VRChat closed or the API was turned off                                                              | `reason`: `gameStopped` or `disabled`                                                                                     |
+
+Each member has `userId`, `displayName`, `isSelf`, `isFriend`, `joinedAt`, `languages` and
+`note`. Send `{ "type": "resync" }` at any time to receive a fresh `room.snapshot`.
+
 ## MCP server
 
 Under Settings > AI. Lets external AI tools read your local data. See

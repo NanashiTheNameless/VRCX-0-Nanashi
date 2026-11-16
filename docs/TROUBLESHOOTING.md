@@ -91,8 +91,26 @@ loads** from VRChat's log into the Game Log.
 
 ## Running without a window
 
-**Headless mode** runs the app's core without any interface, for running on a server. It is
-for advanced users; see the `crates/headless` folder in the repository.
+**Headless mode** runs the app's core without any interface, for example on an always-on PC.
+It keeps your Feed and friend data recording into the same database the desktop app uses. It is
+for advanced users. Release builds do not include it; build it from source with a stable Rust
+toolchain:
+
+```bash
+cargo build --release -p vrcx-0-headless
+```
+
+The binary is at `target/release/vrcx-0-headless` (`.exe` on Windows). Run it as
+`vrcx-0-headless [--login | -l]`:
+
+- Without arguments, it signs in with the session or password saved by the app. If that needs
+  your input, such as a 2FA code, it exits with an error.
+- `--login` / `-l` asks for your username or email, password and 2FA code in the terminal.
+- Press **Ctrl+C** to stop.
+
+It uses the same data folder as the desktop app, including a custom data folder set in the app.
+Errors are written to `error-headless.txt` in that folder. Set the `RUST_LOG` environment
+variable to change console log detail (default `vrcx_0=info`).
 
 ## Keeping the PC awake
 
