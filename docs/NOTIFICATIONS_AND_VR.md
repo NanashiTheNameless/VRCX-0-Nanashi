@@ -62,7 +62,9 @@ filters but respects each channel's switch, condition and Do Not Disturb.
 checks VRChat's store a minute after you sign in and then every 3 hours, compares it with your
 purchases, and shows a window listing free items you do not own yet. **Claim All** adds them to
 your account; nothing is claimed before that. Items VRChat refuses are not offered again, and
-**Don't check for free items again** turns the setting off.
+**Don't check for free items again** turns the setting off. **Check now**, next to the switch,
+looks once right away, even while the setting is off, and lists every free item you do not own
+yet, including ones offered before.
 
 ## Do Not Disturb
 

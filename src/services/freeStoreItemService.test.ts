@@ -1,6 +1,39 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { findFreeListings } from './freeStoreItemService';
+const mocks = vi.hoisted(() => ({
+    shelves: vi.fn(),
+    purchases: vi.fn()
+}));
+
+vi.mock('@/repositories/vrchatEconomyRepository', async (importOriginal) => {
+    const actual =
+        await importOriginal<
+            typeof import('@/repositories/vrchatEconomyRepository')
+        >();
+    return {
+        ...actual,
+        default: {
+            ...actual.default,
+            getStoreShelfListings: mocks.shelves,
+            getPurchases: mocks.purchases
+        }
+    };
+});
+
+vi.mock('@/repositories/configRepository', () => ({
+    default: {
+        getObject: vi.fn().mockResolvedValue({}),
+        setObject: vi.fn().mockResolvedValue(null)
+    }
+}));
+
+import { useFreeStoreItemStore } from '@/state/freeStoreItemStore';
+
+import {
+    checkFreeStoreItems,
+    checkFreeStoreItemsNow,
+    findFreeListings
+} from './freeStoreItemService';
 
 const none = {
     owned: { listingIds: new Set<string>(), productIds: new Set<string>() },
@@ -76,5 +109,45 @@ describe('findFreeListings', () => {
             none
         ).map((listing) => listing.id);
         expect(ids).toEqual(['bundle']);
+    });
+});
+
+describe('checkFreeStoreItemsNow', () => {
+    beforeEach(() => {
+        mocks.shelves.mockReset();
+        mocks.purchases.mockReset();
+        mocks.purchases.mockResolvedValue([]);
+        useFreeStoreItemStore.setState({ open: false, listings: [] });
+    });
+
+    it('offers items the automatic check already offered', async () => {
+        mocks.shelves.mockImplementation(async (storeId: string) =>
+            storeId.endsWith('0')
+                ? [{ id: 'free', active: true, priceTokens: 0 }]
+                : []
+        );
+        const shown = new Set<string>();
+        expect(await checkFreeStoreItems('usr_now', shown)).toBe(1);
+        useFreeStoreItemStore.getState().close();
+        expect(await checkFreeStoreItems('usr_now', shown)).toBe(0);
+
+        expect(await checkFreeStoreItemsNow('usr_now')).toBe(1);
+        expect(useFreeStoreItemStore.getState().listings).toHaveLength(1);
+    });
+
+    it('skips items already in the open window', async () => {
+        mocks.shelves.mockImplementation(async (storeId: string) =>
+            storeId.endsWith('0')
+                ? [
+                      { id: 'a', active: true, priceTokens: 0 },
+                      { id: 'b', active: true, priceTokens: 0 }
+                  ]
+                : []
+        );
+        useFreeStoreItemStore.getState().show([{ id: 'a' }]);
+        expect(await checkFreeStoreItemsNow('usr_open')).toBe(1);
+        expect(
+            useFreeStoreItemStore.getState().listings.map((item) => item.id)
+        ).toEqual(['a', 'b']);
     });
 });

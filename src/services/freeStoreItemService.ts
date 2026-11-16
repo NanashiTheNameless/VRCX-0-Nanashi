@@ -131,10 +131,24 @@ function isVrcPlusSupporter() {
     );
 }
 
+// Listings already offered this session, per account, so the automatic check
+// does not offer them again after a manual check.
+const offeredByUser = new Map<string, Set<string>>();
+
+function offeredIds(userId: string): Set<string> {
+    let ids = offeredByUser.get(userId);
+    if (!ids) {
+        ids = new Set();
+        offeredByUser.set(userId, ids);
+    }
+    return ids;
+}
+
+/** Returns how many items were offered. */
 export async function checkFreeStoreItems(
     userId: string,
     shownIds: Set<string>
-) {
+): Promise<number> {
     const [shelves, purchases, failedIds] = await Promise.all([
         Promise.all(
             VRCHAT_STORE_IDS.map((storeId) =>
@@ -149,9 +163,11 @@ export async function checkFreeStoreItems(
         isVrcPlus: isVrcPlusSupporter(),
         excludedIds: new Set([...failedIds, ...shownIds])
     });
+    const offered = offeredIds(userId);
     for (const listing of listings) {
         if (listing.id) {
             shownIds.add(listing.id);
+            offered.add(listing.id);
         }
     }
     if (listings.length > 0) {
@@ -166,12 +182,29 @@ export async function checkFreeStoreItems(
             }))
         );
     }
+    return listings.length;
+}
+
+/**
+ * The Check now button: every free item not owned yet, including ones offered
+ * before, except those already in the open window. Only runs when clicked.
+ */
+export function checkFreeStoreItemsNow(userId: string): Promise<number> {
+    const { open, listings } = useFreeStoreItemStore.getState();
+    const inWindow = new Set(
+        open
+            ? listings
+                  .map((listing) => listing.id)
+                  .filter((id): id is string => Boolean(id))
+            : []
+    );
+    return checkFreeStoreItems(userId, inWindow);
 }
 
 // Off unless the user turned on free store item notifications; reads the
 // store and the user's purchases only.
 export function startFreeStoreItemWatch(userId: string) {
-    const shownIds = new Set<string>();
+    const shownIds = offeredIds(userId);
     const check = () => {
         checkFreeStoreItems(userId, shownIds).catch((error: unknown) => {
             console.warn('Failed to check free store items:', error);

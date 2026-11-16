@@ -4655,7 +4655,10 @@
                     "in_app": {
                         "header": "In-App Indicators",
                         "free_store_items": "Free Store Items",
-                        "free_store_items_description": "Check the VRChat store every few hours and offer to claim new free items you do not own yet. Off by default."
+                        "free_store_items_description": "Check the VRChat store every few hours and offer to claim new free items you do not own yet. Off by default. Check now looks once, even while this is off.",
+                        "free_store_items_check": "Check now",
+                        "free_store_items_none": "No free items you do not own yet.",
+                        "free_store_items_failed": "Could not check the store: {error}"
                     },
                     "post_update_changelog_prompt": "Show Update Notes After Updating",
                     "post_update_changelog_prompt_description": "Show what's new after an update is installed.",

@@ -14,6 +14,7 @@ import { Switch } from '@/ui/shadcn/switch';
 import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
+import { FreeStoreItemCheckButton } from './FreeStoreItemCheckButton';
 
 type SettingsNotificationsInAppCardProps = {
     prefs: {
@@ -164,10 +165,13 @@ export function SettingsNotificationsInAppCard({
                     'view.settings.notifications.notifications.in_app.free_store_items_description'
                 )}
             >
-                <Switch
-                    checked={prefs.freeStoreItemNotifications}
-                    onCheckedChange={onFreeStoreItemNotificationsChange}
-                />
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <FreeStoreItemCheckButton />
+                    <Switch
+                        checked={prefs.freeStoreItemNotifications}
+                        onCheckedChange={onFreeStoreItemNotificationsChange}
+                    />
+                </div>
             </Field>
         </SettingsCard>
     );
