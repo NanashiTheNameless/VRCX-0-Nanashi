@@ -560,11 +560,15 @@ fn bind_private_socket(path: &std::path::Path) -> std::io::Result<tokio::net::Un
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .unwrap_or_else(|| std::path::Path::new("."));
-    let private_dir = parent.join(format!(".vrcx-ipc-{}", uuid::Uuid::new_v4().simple()));
+    // Socket paths are limited to about 100 bytes (104 on macOS, whose
+    // temporary folder is already long), so the staged path is kept shorter
+    // than any socket name it is moved to.
+    let token = uuid::Uuid::new_v4().simple().to_string();
+    let private_dir = parent.join(format!(".vx{}", &token[..8]));
     std::fs::DirBuilder::new()
         .mode(0o700)
         .create(&private_dir)?;
-    let staged = private_dir.join("socket");
+    let staged = private_dir.join("s");
     let result = (|| {
         let listener = tokio::net::UnixListener::bind(&staged)?;
         std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o600))?;
@@ -759,7 +763,8 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         use tokio::io::AsyncWriteExt;
 
-        let dir = std::env::temp_dir().join(format!("vrcx-ipc-test-{}", uuid::Uuid::new_v4()));
+        let token = uuid::Uuid::new_v4().simple().to_string();
+        let dir = std::env::temp_dir().join(format!("vt{}", &token[..8]));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("CoreFxPipe_test");
         let recorder = Arc::new(Recorder::default());
