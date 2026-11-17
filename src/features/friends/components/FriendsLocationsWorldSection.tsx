@@ -1,4 +1,5 @@
 import { GlobeIcon, UserIcon, UsersIcon } from 'lucide-react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AffinityBadge } from '@/components/affinity/AffinityBadge';
@@ -49,14 +50,14 @@ type FriendsLocationsWorldSectionProps = {
     onOpenUser: (friend: FriendRecord) => void;
 };
 
-function FriendChip({
+const FriendChip = memo(function FriendChip({
     friend,
     isFavorite,
     statusDotClassName,
     twoLine,
     showAvatarFrame,
     showNameplate,
-    onOpen
+    onOpenUser
 }: {
     friend: FriendRecord;
     isFavorite: boolean;
@@ -64,7 +65,7 @@ function FriendChip({
     twoLine: boolean;
     showAvatarFrame: boolean;
     showNameplate: boolean;
-    onOpen: () => void;
+    onOpenUser: (friend: FriendRecord) => void;
 }) {
     const { t } = useTranslation();
     const decorationHover = useDecorationHover();
@@ -93,7 +94,7 @@ function FriendChip({
                     'focus-visible:ring-ring/50 bg-foreground/4 relative isolate flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md pr-3 pl-1 text-sm outline-none hover:bg-(--state-hover-surface) focus-visible:ring-3',
                     twoLine ? 'h-10' : 'h-8'
                 )}
-                onClick={onOpen}
+                onClick={() => onOpenUser(friend)}
                 {...decorationHover.hoverProps}
             >
                 {nameplateId ? (
@@ -145,7 +146,7 @@ function FriendChip({
             </button>
         </UserHoverCard>
     );
-}
+});
 
 export function FriendsLocationsFriendChips({
     friends,
@@ -180,7 +181,7 @@ export function FriendsLocationsFriendChips({
                             hideNonFriend: false
                         }
                     )}
-                    onOpen={() => onOpenUser(friend)}
+                    onOpenUser={onOpenUser}
                 />
             ))}
         </div>

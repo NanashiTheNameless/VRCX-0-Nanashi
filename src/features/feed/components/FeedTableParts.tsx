@@ -15,6 +15,7 @@ import {
     LogFilterMenuItems,
     type LogFilterCommands
 } from '@/components/data-table/LogFilterContextMenu';
+import { DeferredContextMenu } from '@/components/DeferredContextMenu';
 import { FeedDetailCell } from '@/components/feed/FeedDetailCell';
 import {
     canRequestInviteFromFeedFriend,
@@ -50,12 +51,10 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/ui/shadcn/avatar';
 import { Button } from '@/ui/shadcn/button';
 import {
-    ContextMenu,
     ContextMenuContent,
     ContextMenuGroup,
     ContextMenuItem,
-    ContextMenuSeparator,
-    ContextMenuTrigger
+    ContextMenuSeparator
 } from '@/ui/shadcn/context-menu';
 
 import { isSameLocalDay } from '../feedTimeDisplay';
@@ -171,68 +170,63 @@ function FeedUserLink({
     const actionTarget: FeedFriendActionTarget = friend || row;
 
     return (
-        <ContextMenu>
-            <ContextMenuTrigger
-                render={
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        className={cn(
-                            'hover:text-content-primary h-auto max-w-full justify-start self-start p-0 text-left font-medium hover:bg-transparent',
-                            showAvatar && 'gap-2',
-                            className
-                        )}
-                        disabled={!userId}
-                        onClick={() =>
-                            openUserDialog({
-                                userId,
-                                title: userLabel,
-                                seedData: displayUser || null
-                            })
-                        }
-                    >
-                        {showAvatar ? (
-                            <Avatar
-                                size="default"
-                                style={{
-                                    height: avatarSize,
-                                    width: avatarSize
-                                }}
-                            >
-                                {imageUrl ? (
-                                    <AvatarImage src={imageUrl} alt="" />
-                                ) : null}
-                                <AvatarFallback
-                                    className={cn(
-                                        avatarSize >= 40
-                                            ? 'text-xs'
-                                            : 'text-[10px]'
-                                    )}
-                                >
-                                    <UserIcon
-                                        className={
-                                            avatarSize >= 40
-                                                ? 'size-4'
-                                                : 'size-3.5'
-                                        }
-                                    />
-                                </AvatarFallback>
-                            </Avatar>
-                        ) : null}
-                        <span
-                            className={cn(
-                                'flex min-w-0 items-center gap-x-1',
-                                showAvatar ? 'flex-1' : 'max-w-full'
-                            )}
+        <DeferredContextMenu
+            trigger={
+                <Button
+                    type="button"
+                    variant="ghost"
+                    className={cn(
+                        'hover:text-content-primary h-auto max-w-full justify-start self-start p-0 text-left font-medium hover:bg-transparent',
+                        showAvatar && 'gap-2',
+                        className
+                    )}
+                    disabled={!userId}
+                    onClick={() =>
+                        openUserDialog({
+                            userId,
+                            title: userLabel,
+                            seedData: displayUser || null
+                        })
+                    }
+                >
+                    {showAvatar ? (
+                        <Avatar
+                            size="default"
+                            style={{
+                                height: avatarSize,
+                                width: avatarSize
+                            }}
                         >
-                            <span className="max-w-full min-w-0 truncate">
-                                {userLabel}
-                            </span>
-                            <UserBadges userId={userId} />
+                            {imageUrl ? (
+                                <AvatarImage src={imageUrl} alt="" />
+                            ) : null}
+                            <AvatarFallback
+                                className={cn(
+                                    avatarSize >= 40 ? 'text-xs' : 'text-[10px]'
+                                )}
+                            >
+                                <UserIcon
+                                    className={
+                                        avatarSize >= 40 ? 'size-4' : 'size-3.5'
+                                    }
+                                />
+                            </AvatarFallback>
+                        </Avatar>
+                    ) : null}
+                    <span
+                        className={cn(
+                            'flex min-w-0 items-center gap-x-1',
+                            showAvatar ? 'flex-1' : 'max-w-full'
+                        )}
+                    >
+                        <span className="max-w-full min-w-0 truncate">
+                            {userLabel}
                         </span>
-                    </Button>
-                }
-            />
+                        <UserBadges userId={userId} />
+                    </span>
+                </Button>
+            }
+        >
             <ContextMenuContent className="w-max max-w-[calc(100vw-1rem)] min-w-56">
                 <ContextMenuGroup>
                     <ContextMenuItem
@@ -387,7 +381,7 @@ function FeedUserLink({
                     target={{ userId, userName: userLabel }}
                 />
             </ContextMenuContent>
-        </ContextMenu>
+        </DeferredContextMenu>
     );
 }
 

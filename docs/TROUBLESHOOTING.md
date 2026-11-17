@@ -2,6 +2,9 @@
 
 ## Something went wrong
 
+- **A page shows "Oops, something went wrong."**: that page crashed while drawing. The rest of
+  the app keeps working; open another page and come back, or press **Reload UI** to reload the
+  interface. If it keeps happening, check the error log below.
 - **Error log**: `error-log.txt` in the data folder records errors and connection problems,
   including the provider's reply when the AI Assistant fails. Open it from Settings > Advanced >
   Troubleshooting. Attach it when reporting a bug, but read it first: it can contain local paths

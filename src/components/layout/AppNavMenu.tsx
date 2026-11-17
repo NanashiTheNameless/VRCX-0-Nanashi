@@ -1,5 +1,5 @@
 import { PanelLeftIcon, PanelLeftOpenIcon, SettingsIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 
@@ -28,6 +28,7 @@ import { useShellStore } from '@/state/shellStore';
 import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 
 import { NavIcon } from './app-nav-menu/AppNavMenuIcons';
+import type { NavMenuActionHandlers } from './app-nav-menu/types';
 import {
     isDashboardEntry,
     isEntryActive,
@@ -197,13 +198,17 @@ function useAppNavNotifications({
     const freeStoreItemNotifications = usePreferencesStore(
         (state) => state.freeStoreItemNotifications
     );
-    const notifiedKeys = new Set(notifiedMenus);
-    if (vrcUnseenNotificationCount > 0) {
-        notifiedKeys.add('notification');
-    }
-    if (hasUnseenBundles) {
-        notifiedKeys.add('inventory');
-    }
+    const hasUnseenVrcNotifications = vrcUnseenNotificationCount > 0;
+    const notifiedKeys = useMemo(() => {
+        const keys = new Set(notifiedMenus);
+        if (hasUnseenVrcNotifications) {
+            keys.add('notification');
+        }
+        if (hasUnseenBundles) {
+            keys.add('inventory');
+        }
+        return keys;
+    }, [hasUnseenBundles, hasUnseenVrcNotifications, notifiedMenus]);
 
     useEffect(() => {
         if (sessionPhase !== 'ready' || !currentUserId) {
@@ -395,6 +400,31 @@ function useAppNavToolActions({
     return { unpinToolEntry };
 }
 
+type AppNavMenuActions = NavMenuActionHandlers & {
+    onCreateDashboard: () => void | Promise<void>;
+};
+
+function useStableNavMenuActions(actions: AppNavMenuActions) {
+    const latestActions = useRef(actions);
+    useLayoutEffect(() => {
+        latestActions.current = actions;
+    });
+    return useMemo<AppNavMenuActions>(
+        () => ({
+            onSelect: (entry) => latestActions.current.onSelect(entry),
+            onMarkAllRead: () => latestActions.current.onMarkAllRead(),
+            onCreateDashboard: () => latestActions.current.onCreateDashboard(),
+            onEditDashboard: (entry) =>
+                latestActions.current.onEditDashboard(entry),
+            onDeleteDashboard: (entry) =>
+                latestActions.current.onDeleteDashboard(entry),
+            onUnpinTool: (entry) => latestActions.current.onUnpinTool(entry),
+            onOpenCustomNav: () => latestActions.current.onOpenCustomNav()
+        }),
+        []
+    );
+}
+
 function placeCollapsedShortcutHintPanel(panel: HTMLDivElement | null) {
     const sidebar = document.querySelector(
         '[data-slot="sidebar-container"][data-side="left"]'
@@ -497,19 +527,26 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
 
     const shouldShowCreateDashboard = showNewDashboardButton;
 
-    const handleSelectEntry = useCallback(
-        async (entry: NavMenuItem) => {
-            if (entry.action?.type === 'tool') {
-                await triggerToolByKey(entry.action.toolKey, { navigate, t });
-                return;
-            }
-            const path = getPathForNavEntry(entry);
-            if (path) {
-                navigate(path);
-            }
-        },
-        [navigate, t]
-    );
+    async function handleSelectEntry(entry: NavMenuItem) {
+        if (entry.action?.type === 'tool') {
+            await triggerToolByKey(entry.action.toolKey, { navigate, t });
+            return;
+        }
+        const path = getPathForNavEntry(entry);
+        if (path) {
+            navigate(path);
+        }
+    }
+
+    const menuActions = useStableNavMenuActions({
+        onSelect: handleSelectEntry,
+        onMarkAllRead: markAllRead,
+        onCreateDashboard: createDashboardFromNav,
+        onEditDashboard: editDashboard,
+        onDeleteDashboard: deleteDashboardFromNav,
+        onUnpinTool: unpinToolEntry,
+        onOpenCustomNav: () => setCustomNavDialogOpen(true)
+    });
 
     useEffect(() => {
         function handleNavShortcutRequested(event: Event) {
@@ -521,7 +558,7 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
             }
             const entry = navShortcutEntries[event.detail - 1]?.entry;
             if (entry) {
-                void handleSelectEntry(entry);
+                void menuActions.onSelect(entry);
             }
         }
 
@@ -535,7 +572,7 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
                 handleNavShortcutRequested
             );
         };
-    }, [handleSelectEntry, navShortcutEntries]);
+    }, [menuActions, navShortcutEntries]);
 
     const collapsedNavShortcutItems: ShortcutHintItem[] =
         navShortcutEntries.map(({ entry, position }) => ({
@@ -612,7 +649,7 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
             <AppNavCreateDashboardHeader
                 visible={shouldShowCreateDashboard}
                 disabled={isCreatingDashboard}
-                onCreateDashboard={createDashboardFromNav}
+                onCreateDashboard={menuActions.onCreateDashboard}
             />
 
             <AppNavMenuContent
@@ -624,13 +661,7 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
                 pathname={location.pathname}
                 notifiedKeys={notifiedKeys}
                 hasNotifications={hasNotifications}
-                onSelect={handleSelectEntry}
-                onMarkAllRead={markAllRead}
-                onCreateDashboard={createDashboardFromNav}
-                onEditDashboard={editDashboard}
-                onDeleteDashboard={deleteDashboardFromNav}
-                onUnpinTool={unpinToolEntry}
-                onOpenCustomNav={() => setCustomNavDialogOpen(true)}
+                {...menuActions}
             />
 
             <AppNavFooter

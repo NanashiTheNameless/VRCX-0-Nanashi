@@ -4,9 +4,9 @@ import {
     HashRouter,
     Navigate,
     Outlet,
-    Route,
-    Routes,
-    useLocation
+    useLocation,
+    useRoutes,
+    type RouteObject
 } from 'react-router';
 
 import { GlobalHosts } from '@/app/GlobalHosts';
@@ -42,6 +42,7 @@ function RouteErrorFallback() {
     const { t } = useTranslation();
     return (
         <div className="text-muted-foreground flex h-full min-h-0 flex-col items-center justify-center gap-3 text-sm">
+            <p>{t('common.error.page_crashed')}</p>
             <Button
                 variant="outline"
                 size="sm"
@@ -123,6 +124,59 @@ function AppShellRoute() {
     );
 }
 
+const appRoutes: RouteObject[] = [
+    {
+        element: <RedirectIfAuthenticated />,
+        children: publicRoutes
+    },
+    {
+        element: <RequireAuth />,
+        children: [
+            {
+                element: <AppShellRoute />,
+                children: [
+                    { index: true, element: <RememberedPageRedirect /> },
+                    ...protectedRoutes,
+                    { path: '*', element: <Navigate to="/feed" replace /> }
+                ]
+            }
+        ]
+    }
+];
+
+function AppRoutes() {
+    const { pathname } = useLocation();
+    const routes = useRoutes(appRoutes);
+    return (
+        <RouteErrorBoundary
+            resetKey={pathname}
+            fallback={<RouteErrorFallback />}
+        >
+            {routes}
+        </RouteErrorBoundary>
+    );
+}
+
+function RouteLocationEffects({ sessionReady }: { sessionReady: boolean }) {
+    const { pathname, search, hash } = useLocation();
+    useEffect(() => {
+        const route = pathname + search + hash;
+        if (sessionReady && isRememberedPageRoute(route)) {
+            useNavigationCacheStore.getState().setLastRoute(route);
+        }
+    }, [pathname, search, hash, sessionReady]);
+    useGlobalKeyboardShortcuts();
+    useTrayShortcut();
+    useEffect(() => {
+        if (pathname === '/login') {
+            leaveSidebarWindowModeForLogin();
+        } else {
+            restoreSidebarWindowModeAfterLogin();
+        }
+    }, [pathname]);
+    return null;
+}
+
 function AppRouterContent() {
     const hostPlatform = useRuntimeStore(
         (state) => state.hostCapabilities.platform
@@ -131,19 +185,10 @@ function AppRouterContent() {
     const linuxHardwareRendering = useLinuxHardwareRendering(
         hostPlatform === 'linux'
     );
-    const { pathname, search, hash } = useLocation();
     const sessionReady = useSessionStore(
         (state) => state.sessionPhase === 'ready'
     );
-    useEffect(() => {
-        const route = pathname + search + hash;
-        if (sessionReady && isRememberedPageRoute(route)) {
-            useNavigationCacheStore.getState().setLastRoute(route);
-        }
-    }, [pathname, search, hash, sessionReady]);
-    useGlobalKeyboardShortcuts();
     useAppZoomShortcuts();
-    useTrayShortcut();
     useSidebarAutoHide();
     useEffect(() => {
         let disposed = false;
@@ -178,13 +223,6 @@ function AppRouterContent() {
             );
         });
     }, []);
-    useEffect(() => {
-        if (pathname === '/login') {
-            leaveSidebarWindowModeForLogin();
-        } else {
-            restoreSidebarWindowModeAfterLogin();
-        }
-    }, [pathname]);
     useEffect(() => {
         if (!isMacHost) {
             return undefined;
@@ -228,49 +266,13 @@ function AppRouterContent() {
                     data-vrcx-0-surface="route-host"
                     className="vrcx-0-route-host min-h-0 flex-1 overflow-hidden"
                 >
-                    <RouteErrorBoundary
-                        resetKey={pathname}
-                        fallback={<RouteErrorFallback />}
-                    >
-                        <Routes>
-                            <Route element={<RedirectIfAuthenticated />}>
-                                {publicRoutes.map((route) => (
-                                    <Route
-                                        key={route.path}
-                                        path={route.path}
-                                        element={route.element}
-                                    />
-                                ))}
-                            </Route>
-
-                            <Route element={<RequireAuth />}>
-                                <Route element={<AppShellRoute />}>
-                                    <Route
-                                        index
-                                        element={<RememberedPageRedirect />}
-                                    />
-                                    {protectedRoutes.map((route) => (
-                                        <Route
-                                            key={route.path}
-                                            path={route.path}
-                                            element={route.element}
-                                        />
-                                    ))}
-                                    <Route
-                                        path="*"
-                                        element={
-                                            <Navigate to="/feed" replace />
-                                        }
-                                    />
-                                </Route>
-                            </Route>
-                        </Routes>
-                    </RouteErrorBoundary>
+                    <AppRoutes />
                 </div>
                 <GlobalHosts />
                 <MacNativeMenuActionHost />
             </div>
             {hasCustomWindowFrame ? <WindowResizeHandles /> : null}
+            <RouteLocationEffects sessionReady={sessionReady} />
         </QuickSearchProvider>
     );
 }
