@@ -7,7 +7,10 @@ use reqwest::{StatusCode, Url};
 use tokio::sync::Mutex;
 use tokio::time::Instant;
 
-const MIN_RATE_LIMIT_WAIT: Duration = Duration::from_secs(60);
+// VRChat often answers a 429 without Retry-After. A long floor here stalls
+// every API read, including the startup friend load the realtime connection
+// waits on, so start short and let repeated limits escalate.
+const MIN_RATE_LIMIT_WAIT: Duration = Duration::from_secs(5);
 const MAX_BACKOFF: Duration = Duration::from_secs(15 * 60);
 const MAX_RETRY_AFTER: Duration = Duration::from_secs(60 * 60);
 
@@ -195,7 +198,7 @@ mod tests {
     async fn repeated_rate_limits_back_off_and_external_requests_are_unaffected() {
         let limits = VrchatRateLimits::default();
         let url = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
-        for delay in [60, 120, 240] {
+        for delay in [5, 10, 20] {
             let request = limits.acquire(&url, false, true).await.unwrap().unwrap();
             request
                 .lock()
@@ -287,7 +290,7 @@ mod tests {
                 .is_err()
         );
         assert!(
-            matches!(limits.acquire(&url, false, false).await, Err(delay) if delay > Duration::from_secs(58))
+            matches!(limits.acquire(&url, false, false).await, Err(delay) if delay > Duration::from_secs(3))
         );
         assert_eq!(start.elapsed(), Duration::from_secs(1));
     }

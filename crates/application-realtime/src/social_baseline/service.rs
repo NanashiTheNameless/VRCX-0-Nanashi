@@ -197,9 +197,15 @@ pub async fn build_synced_friend_roster_baseline(
             friends_by_id: None,
         });
     };
+    let verify_started_at = std::time::Instant::now();
     let verdicts =
         verify_friend_log_relationship_changes(&deps, &endpoint, &output.user_id, &friends_by_id)
             .await;
+    tracing::info!(
+        target: "vrcx_0::realtime_timing",
+        verify_ms = verify_started_at.elapsed().as_millis() as u64,
+        "friend relationship changes verified"
+    );
 
     let outcome = runtime.sync_friend_snapshot_with_watermark(
         RealtimeSessionContext::new(output.user_id.clone(), endpoint, websocket),

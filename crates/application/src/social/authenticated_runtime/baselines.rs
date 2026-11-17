@@ -87,6 +87,11 @@ impl AuthenticatedRuntimeOrchestrator {
             return Ok(None);
         }
         self.set_step_running(run_id, RuntimeStep::Friends, attempt);
+        let started_at = std::time::Instant::now();
+        self.trail(
+            "friendBaselineStarted",
+            serde_json::json!({ "runId": run_id, "attempt": attempt }),
+        );
         let result = build_synced_friend_roster_baseline(
             self.social_baseline_deps(),
             &self.realtime_runtime,
@@ -112,6 +117,16 @@ impl AuthenticatedRuntimeOrchestrator {
                 })),
             }
         });
+        self.trail(
+            "friendBaselineFinished",
+            serde_json::json!({
+                "runId": run_id,
+                "attempt": attempt,
+                "elapsedMs": started_at.elapsed().as_millis() as u64,
+                "friends": result.as_ref().ok().map(|(_, ids)| ids.len()),
+                "error": result.as_ref().err().map(ToString::to_string),
+            }),
+        );
         if !self.is_active(run_id, scope, stop_token) {
             return Ok(None);
         }

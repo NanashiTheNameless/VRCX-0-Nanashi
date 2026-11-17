@@ -30,12 +30,17 @@ const FRIEND = 'usr_friend';
 const ENDPOINT = DEFAULT_VRCHAT_API_ENDPOINT;
 let stop: (() => void) | undefined;
 
-function signIn(owner = OWNER) {
+function signIn(owner = OWNER, { rosterLoaded = true } = {}) {
     useRuntimeStore.getState().setAuthBootstrap({
         currentUserId: owner,
         currentUserEndpoint: ENDPOINT
     });
     useSessionStore.getState().setSessionPhase('ready');
+    if (rosterLoaded) {
+        useFriendRosterStore
+            .getState()
+            .setRosterSnapshot({ currentUserId: owner, friendsById: {} });
+    }
 }
 
 function membership(userId: string) {
@@ -144,6 +149,23 @@ describe('user group initialization', () => {
         });
     });
 
+    it('waits for the friend list so it cannot delay the realtime connection', async () => {
+        signIn(OWNER, { rosterLoaded: false });
+        useFriendRosterStore.getState().setRosterLoading(OWNER);
+        stop = startUserGroupSync();
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(mocks.getGroups).not.toHaveBeenCalled();
+
+        useFriendRosterStore.getState().setRosterSnapshot({
+            currentUserId: OWNER,
+            friendsById: { [FRIEND]: { id: FRIEND } }
+        });
+        await vi.advanceTimersByTimeAsync(500);
+        expect(
+            mocks.getGroups.mock.calls.map(([input]) => input.userId)
+        ).toEqual([OWNER, FRIEND]);
+    });
+
     it('pauses the entire queue after a rate limit, then retries without treating failure as non-membership', async () => {
         signIn();
         useRuntimeStore
@@ -163,6 +185,32 @@ describe('user group initialization', () => {
         expect(membership(PLAYER)).toBe(false);
         await vi.advanceTimersByTimeAsync(500);
         expect(mocks.getGroups).toHaveBeenCalledTimes(3);
+    });
+
+    it('backs off a list that keeps being rate limited so other users still load', async () => {
+        signIn();
+        useFriendRosterStore.getState().setRosterSnapshot({
+            currentUserId: OWNER,
+            friendsById: { [FRIEND]: { id: FRIEND } }
+        });
+        mocks.getGroups.mockImplementation(async ({ userId }) =>
+            userId === OWNER
+                ? { status: 429, data: 'Slow down' }
+                : { status: 200, data: '[]' }
+        );
+        stop = startUserGroupSync();
+        await vi.advanceTimersByTimeAsync(60_000);
+        const calls = () =>
+            mocks.getGroups.mock.calls.map(([input]) => input.userId);
+        expect(calls()).toEqual([OWNER, OWNER]);
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(calls()).toEqual([OWNER, OWNER, FRIEND]);
+        expect(membership(FRIEND)).toBe(false);
+        await vi.advanceTimersByTimeAsync(59_999);
+        expect(calls()).toEqual([OWNER, OWNER, FRIEND]);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(calls()).toEqual([OWNER, OWNER, FRIEND, OWNER]);
+        expect(membership(OWNER)).toBeNull();
     });
 
     it('keeps failed lookups unknown and retries transient failures', async () => {

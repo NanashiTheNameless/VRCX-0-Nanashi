@@ -166,6 +166,7 @@ pub(crate) async fn build_friend_roster_baseline(
         });
     }
 
+    let started_at = std::time::Instant::now();
     let current_user = execute_vrchat_json_request(
         &deps,
         deps.remote_requests.current_user(input.endpoint.clone())?,
@@ -189,9 +190,16 @@ pub(crate) async fn build_friend_roster_baseline(
         });
     }
     let expected_ids = state_order_ids;
+    let current_user_ms = started_at.elapsed().as_millis() as u64;
 
+    let phase_started_at = std::time::Instant::now();
     let online_friends = fetch_all_friends(&deps, &input.endpoint, false).await?;
+    let online_ms = phase_started_at.elapsed().as_millis() as u64;
+    let online_count = online_friends.len();
+    let phase_started_at = std::time::Instant::now();
     let offline_friends = fetch_all_friends(&deps, &input.endpoint, true).await?;
+    let offline_ms = phase_started_at.elapsed().as_millis() as u64;
+    let offline_count = offline_friends.len();
     let mut fetched_friends_by_id = collect_fetched_friends(online_friends, offline_friends);
 
     if !auth_scope_matches(&deps, &user_id, &input.endpoint) {
@@ -210,6 +218,8 @@ pub(crate) async fn build_friend_roster_baseline(
             }
         }
     }
+    let refetch_count = refetch_ids.len();
+    let phase_started_at = std::time::Instant::now();
     if !refetch_ids.is_empty() {
         let repaired = refetch_users_concurrent(&deps, &input.endpoint, refetch_ids).await;
         for (repaired_id, user) in repaired {
@@ -226,6 +236,21 @@ pub(crate) async fn build_friend_roster_baseline(
             }
         }
     }
+
+    let refetch_ms = phase_started_at.elapsed().as_millis() as u64;
+    tracing::info!(
+        target: "vrcx_0::realtime_timing",
+        expected = expected_ids.len(),
+        current_user_ms,
+        online_ms,
+        online_count,
+        offline_ms,
+        offline_count,
+        refetch_count,
+        refetch_ms,
+        total_ms = started_at.elapsed().as_millis() as u64,
+        "friend roster baseline fetched"
+    );
 
     let friends_by_id =
         build_fast_roster_records(&expected_ids, &state_by_id, fetched_friends_by_id);

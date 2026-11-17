@@ -58,11 +58,13 @@ and check mark icon, in white on VRChat blue, with a white border inside a thin 
 so it stays visible on light and dark themes. It does not animate. Its full name is **VRChat
 Staff**.
 
-After sign-in, the app automatically loads each initialized user's group list, including
-friends, current instance players and users loaded later. Current players are checked first.
-Requests are paced and reuse cached lists. Staff badges update in the user list and wrist
-menu when those lists arrive; opening a profile is not required. A full instance can take
-time to finish loading, and failed requests do not count as proof of non-membership.
+After sign-in, once your friends list has loaded, the app automatically loads each
+initialized user's group list, including friends, current instance players and users loaded
+later. Current players are checked first. Requests are paced and reuse cached lists. A list
+VRChat keeps refusing is retried less and less often (up to once an hour) so it does not hold
+up the others. Staff badges update in the user list and wrist menu when those lists arrive;
+opening a profile is not required. A full instance can take time to finish loading, and
+failed requests do not count as proof of non-membership.
 
 ## Global badges
 

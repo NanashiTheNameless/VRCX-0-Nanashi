@@ -14,6 +14,7 @@ import {
 
 const REQUEST_GAP_MS = 500;
 const RETRY_DELAY_MS = 60_000;
+const MAX_RETRY_DELAY_MS = 60 * 60_000;
 
 export function startUserGroupSync(): () => void {
     trackUserGroupMembership(queryClient);
@@ -23,7 +24,13 @@ export function startUserGroupSync(): () => void {
     let generation = 0;
     let candidates = new Set<string>();
     const retryAt = new Map<string, number>();
+    // A list VRChat keeps refusing must not hold the head of the queue: each
+    // retry would hit it first again and every 429 pauses all API reads.
+    const failures = new Map<string, number>();
     let nextRequestAt = 0;
+    // The realtime connection waits for the friend list, so stay out of its
+    // way until that list has loaded.
+    let rosterLoaded = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     function schedule() {
@@ -31,7 +38,7 @@ export function startUserGroupSync(): () => void {
             clearTimeout(timer);
             timer = null;
         }
-        if (stopped || running || !scope) return;
+        if (stopped || running || !scope || !rosterLoaded) return;
         let next = Infinity;
         for (const userId of candidates) {
             next = Math.min(next, retryAt.get(userId) ?? 0);
@@ -59,7 +66,10 @@ export function startUserGroupSync(): () => void {
         running = true;
         try {
             await groupProfileRepository.getUserGroups({ userId, retry: 0 });
-            if (generation === requestGeneration) retryAt.set(userId, Infinity);
+            if (generation === requestGeneration) {
+                retryAt.set(userId, Infinity);
+                failures.delete(userId);
+            }
         } catch (error) {
             if (generation === requestGeneration) {
                 const status = isVrchatRequestError(error)
@@ -67,11 +77,17 @@ export function startUserGroupSync(): () => void {
                     : isRecord(error) && error.code === 'vrchat_api'
                       ? error.statusCode
                       : 0;
+                const failureCount = (failures.get(userId) ?? 0) + 1;
+                failures.set(userId, failureCount);
                 retryAt.set(
                     userId,
                     status === 403 || status === 404
                         ? Infinity
-                        : Date.now() + RETRY_DELAY_MS
+                        : Date.now() +
+                              Math.min(
+                                  RETRY_DELAY_MS * 2 ** (failureCount - 1),
+                                  MAX_RETRY_DELAY_MS
+                              )
                 );
                 if (status === 429 || status === 401) {
                     nextRequestAt = Date.now() + RETRY_DELAY_MS;
@@ -99,6 +115,7 @@ export function startUserGroupSync(): () => void {
             scope = nextScope;
             generation++;
             retryAt.clear();
+            failures.clear();
         }
         setPinnedUserGroupIds(
             scope
@@ -109,6 +126,9 @@ export function startUserGroupSync(): () => void {
                 : []
         );
         const friends = useFriendRosterStore.getState();
+        rosterLoaded =
+            friends.currentUserId === currentUserId &&
+            friends.lastLoadedAt !== null;
         candidates = new Set(
             [
                 ...runtime.gameState.currentLocationPlayerIds,
