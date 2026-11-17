@@ -311,11 +311,6 @@ pub(super) fn create_main_window(
         builder = builder.proxy_url(proxy_url);
     }
     builder = builder.browser_extensions_enabled(false);
-    // Fork: start maximized until the user has a saved window size; after
-    // that the window-state plugin restores what they last used.
-    if !has_saved_main_window_state(app) {
-        builder = builder.maximized(true);
-    }
 
     let main_window = builder.build()?;
     super::sidebar_auto_hide::attach(&main_window);
@@ -330,19 +325,18 @@ pub(super) fn create_main_window(
     Ok(())
 }
 
-/// Whether the window-state plugin saved a size for the main window.
-fn has_saved_main_window_state(app: &tauri::AppHandle) -> bool {
-    use tauri_plugin_window_state::AppHandleExt;
-
-    let Ok(config_dir) = app.path().app_config_dir() else {
-        return false;
+/// Fork: the app always starts maximized. This runs after the window-state
+/// plugin has restored the saved size and position (it does so while the
+/// window is built, and resizing undoes a builder-level maximize), so
+/// un-maximizing still returns to the last size the user chose. Rebuilds of
+/// the main window outside startup keep the restored state.
+pub(super) fn maximize_main_window_on_startup(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
     };
-    std::fs::read(config_dir.join(app.filename()))
-        .ok()
-        .and_then(|bytes| {
-            serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&bytes).ok()
-        })
-        .is_some_and(|states| states.contains_key("main"))
+    if window.is_visible().unwrap_or(false) {
+        let _ = window.maximize();
+    }
 }
 
 #[cfg(target_os = "windows")]

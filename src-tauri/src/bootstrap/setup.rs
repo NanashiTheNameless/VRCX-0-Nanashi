@@ -24,7 +24,10 @@ use super::adapters::{
 };
 use super::autostart::{apply_autostart_window_state_if_needed, sync_autostart_from_db};
 use super::shared::app_language;
-use super::window::{configure_tray, configure_windows_webview_settings, create_main_window};
+use super::window::{
+    configure_tray, configure_windows_webview_settings, create_main_window,
+    maximize_main_window_on_startup,
+};
 use vrcx_0_application_core::ports::NoopUpdaterPort;
 use vrcx_0_host_desktop::host_capabilities::{current_host_capabilities, LinuxPackageKind};
 
@@ -352,6 +355,7 @@ pub fn setup_app_with_data_dir(
     if let Err(error) = create_startup_main_window(app.handle(), state.runtime_host().proxy_url()) {
         exit_with_main_window_error(app, error.as_ref());
     }
+    maximize_main_window_on_startup(app.handle());
     super::linux_rendering::start_fallback(app.handle());
     state.runtime_host().record_lifecycle_phase(
         "mainWindow",

@@ -104,8 +104,8 @@ works from any app, on Windows. Use Ctrl or Alt with a letter, number or functio
 
 ## Window, tray and background mode
 
-The window opens maximized the first time. After that it reopens at the size, position and
-maximized state you last used.
+The window always opens maximized. Restoring it down returns to the size and position you
+last used.
 
 Under **Settings > System > Window & Tray**:
 
