@@ -10,9 +10,13 @@ impl Drop for TestDir {
 }
 
 fn database() -> (TestDir, DatabaseService) {
+    // Windows clocks can hand parallel tests the same timestamp, so a
+    // counter keeps each test on its own database file.
+    static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let path = std::env::temp_dir().join(format!(
-        "nanashi-profile-history-{}-{}",
+        "nanashi-profile-history-{}-{}-{}",
         std::process::id(),
+        NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
