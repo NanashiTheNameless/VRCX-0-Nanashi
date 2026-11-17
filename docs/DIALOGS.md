@@ -41,6 +41,9 @@ preview so it looks good when pasted; the plain VRChat link is always available 
   most visited worlds (by time or visits, optionally without their home world). Pick 7, 30, 90, 180 or 365 days, or all time.
 - **JSON**: the raw data, for the curious.
 
+The user's friend status and friends in their current instance update live. Other friends'
+details use a snapshot taken when you open or refresh the dialog.
+
 ### Actions
 
 - **Invite**, **Request Invite**, **Send Boop**, **Invite to Group**.
