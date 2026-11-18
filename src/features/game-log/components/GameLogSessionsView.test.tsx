@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { cloneElement } from 'react';
 import type { PropsWithChildren, ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -88,7 +88,7 @@ vi.mock('@/ui/shadcn/hover-card', () => ({
 }));
 
 vi.mock('./GameLogSessionEventRow', () => ({
-    SessionEventGroups: () => null
+    SessionEventGroups: () => <div data-testid="session-body" />
 }));
 
 import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
@@ -101,6 +101,8 @@ describe('GameLogSessionsView', () => {
         cleanup();
         setDisplayTimeZone('');
         vi.clearAllMocks();
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
     });
 
     it('groups epoch-second sessions by the configured calendar day', () => {
@@ -438,5 +440,90 @@ describe('GameLogSessionsView', () => {
                 name: 'view.game_log.sessions.expand_session'
             })
         ).toHaveLength(1);
+    });
+
+    it('mounts nearby session events at once and the rest when they near the viewport', () => {
+        let reportIntersections: IntersectionObserverCallback = () => {};
+        const observed: Element[] = [];
+        vi.stubGlobal(
+            'IntersectionObserver',
+            class {
+                constructor(callback: IntersectionObserverCallback) {
+                    reportIntersections = callback;
+                }
+                observe(element: Element) {
+                    observed.push(element);
+                }
+                unobserve() {}
+                disconnect() {}
+            }
+        );
+        vi.spyOn(
+            HTMLElement.prototype,
+            'getBoundingClientRect'
+        ).mockImplementation(function (this: HTMLElement) {
+            const top = this.dataset.sessionKey?.includes('wrld_a:1')
+                ? 1000
+                : 0;
+            return DOMRect.fromRect({ y: top, height: 100 });
+        });
+        const session = {
+            created_at: Date.parse('2026-08-10T12:00:00Z') / 1000,
+            duration: 60_000,
+            worldId: 'wrld_a',
+            worldName: 'World A',
+            groupName: '',
+            remote: false,
+            playerDurationRows: [],
+            events: [
+                {
+                    type: 'OnPlayerJoined',
+                    created_at: Date.parse('2026-08-10T12:00:00Z') / 1000,
+                    userId: 'usr_a',
+                    displayName: 'A'
+                }
+            ]
+        };
+        render(
+            <GameLogSessionsView
+                isGameRunning={false}
+                defaultOpen
+                sessionOpenOverrides={new Map()}
+                onSessionOpenChange={vi.fn()}
+                sessions={[
+                    { ...session, id: 2, location: 'wrld_a:2' },
+                    { ...session, id: 1, location: 'wrld_a:1' }
+                ]}
+            />,
+            {
+                wrapper: ({ children }) => (
+                    <GameLogSessionAffinityContext
+                        value={{
+                            favoriteIdSet: new Set(),
+                            friendIdSet: new Set()
+                        }}
+                    >
+                        {children}
+                    </GameLogSessionAffinityContext>
+                )
+            }
+        );
+
+        expect(screen.getAllByTestId('session-body')).toHaveLength(1);
+        expect(observed).toHaveLength(1);
+
+        act(() => {
+            reportIntersections(
+                [
+                    {
+                        isIntersecting: true,
+                        target: observed[0]
+                    } as IntersectionObserverEntry
+                ],
+                {} as IntersectionObserver
+            );
+        });
+
+        expect(screen.getAllByTestId('session-body')).toHaveLength(2);
     });
 });

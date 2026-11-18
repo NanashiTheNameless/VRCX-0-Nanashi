@@ -96,6 +96,9 @@ The Tools page groups helpers by kind:
 Settings has these tabs. Each holds cards of related settings, and the search box at the top
 finds any setting by name.
 
+Switching tabs preserves their controls and scroll position while Settings stays open.
+Hidden tabs pause their effects, including while search results are shown.
+
 - **System** - Startup; Window & Tray (minimize to tray, a global show and hide shortcut,
   Privacy Lock, hardware acceleration on Linux, Background Mode); VRChat behavior (relaunch
   after a crash, close lingering processes); Updates; Login & Network (auto sign-in delay,

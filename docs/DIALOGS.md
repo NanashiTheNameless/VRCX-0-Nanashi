@@ -44,6 +44,9 @@ preview so it looks good when pasted; the plain VRChat link is always available 
 The user's friend status and friends in their current instance update live. Other friends'
 details use a snapshot taken when you open or refresh the dialog.
 
+Tabs keep their contents after the first visit while the dialog stays open, so switching
+back preserves their controls and scroll position. Hidden tabs catch up when you return.
+
 ### Actions
 
 - **Invite**, **Request Invite**, **Send Boop**, **Invite to Group**.

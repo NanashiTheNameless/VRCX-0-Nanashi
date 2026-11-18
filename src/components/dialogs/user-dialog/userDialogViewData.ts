@@ -316,45 +316,19 @@ export function buildUserDialogListViewData({
     };
 }
 
-export function buildUserDialogProfileSummary({
+export function buildUserDialogGroupSummary({
     profile,
-    userStats,
     sortedProfileGroups,
     isCurrentUser,
     vrchatConfigConstants,
-    currentUserSnapshot,
-    nowMs,
-    t
+    currentUserSnapshot
 }: {
     profile: DialogRecord;
-    userStats: DialogRecord;
     sortedProfileGroups: ReturnType<typeof normalizeUserGroupMembershipRows>;
     isCurrentUser: boolean;
     vrchatConfigConstants: unknown;
     currentUserSnapshot: DialogRecord | null;
-    nowMs?: number;
-    t?: (key: string) => string;
-} & DialogRecord) {
-    const statsPreviousDisplayNames = Array.isArray(
-        userStats.previousDisplayNames
-    )
-        ? userStats.previousDisplayNames
-        : [];
-    const previousDisplayNames = mergePreviousDisplayNames(
-        profile.displayName || profile.username,
-        profile.previousDisplayNames,
-        profile.pastDisplayNames,
-        isCurrentUser ? currentUserSnapshot?.pastDisplayNames : null,
-        statsPreviousDisplayNames
-    );
-    const previousDisplayNamesTitle = previousDisplayNames
-        .map((entry) =>
-            entry.updated_at
-                ? `${entry.displayName} - ${formatStatsDate(entry.updated_at)}`
-                : entry.displayName
-        )
-        .join('\n');
-    const statusStateText = resolveStatusStateText(profile, t);
+}) {
     const userGroupSections = splitUserGroups(
         sortedProfileGroups,
         normalizedText(profile.id),
@@ -381,6 +355,46 @@ export function buildUserDialogProfileSummary({
                 : groupLimits.MAX_JOINED
             : 0
     );
+    return { userGroupSections, ownGroupCountText, remainingGroupCountText };
+}
+
+export function buildUserDialogProfileSummary({
+    profile,
+    userStats,
+    isCurrentUser,
+    vrchatConfigConstants,
+    currentUserSnapshot,
+    nowMs,
+    t
+}: {
+    profile: DialogRecord;
+    userStats: DialogRecord;
+    isCurrentUser: boolean;
+    vrchatConfigConstants: unknown;
+    currentUserSnapshot: DialogRecord | null;
+    nowMs?: number;
+    t?: Translate;
+} & DialogRecord) {
+    const statsPreviousDisplayNames = Array.isArray(
+        userStats.previousDisplayNames
+    )
+        ? userStats.previousDisplayNames
+        : [];
+    const previousDisplayNames = mergePreviousDisplayNames(
+        profile.displayName || profile.username,
+        profile.previousDisplayNames,
+        profile.pastDisplayNames,
+        isCurrentUser ? currentUserSnapshot?.pastDisplayNames : null,
+        statsPreviousDisplayNames
+    );
+    const previousDisplayNamesTitle = previousDisplayNames
+        .map((entry) =>
+            entry.updated_at
+                ? `${entry.displayName} - ${formatStatsDate(entry.updated_at)}`
+                : entry.displayName
+        )
+        .join('\n');
+    const statusStateText = resolveStatusStateText(profile, t);
     const userTimeSpent =
         Number(
             userStats.timeSpent ?? profile.timeSpent ?? profile.$timeSpent ?? 0
@@ -417,9 +431,6 @@ export function buildUserDialogProfileSummary({
         previousDisplayNames,
         previousDisplayNamesTitle,
         statusStateText,
-        userGroupSections,
-        ownGroupCountText,
-        remainingGroupCountText,
         userTimeSpent,
         userJoinCount,
         lastSeen,

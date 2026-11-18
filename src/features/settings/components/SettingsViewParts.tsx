@@ -1,6 +1,8 @@
 import { PlusIcon, XIcon } from 'lucide-react';
 import {
     Activity,
+    createContext,
+    use,
     useEffect,
     useRef,
     useState,
@@ -60,6 +62,11 @@ type PersistOptions = {
     showToast?: boolean;
 };
 
+export const SettingsTabsVisibilityContext = createContext<{
+    activeTab: string;
+    keptTabs: ReadonlySet<string>;
+} | null>(null);
+
 export function SettingsTabContent({
     value,
     children
@@ -67,23 +74,27 @@ export function SettingsTabContent({
     // Fork: a tab mounts on first visit and then stays mounted but hidden
     // (no effects), so switching back to it is instant.
     const activeTab = useActiveSettingsTab();
-    const active = activeTab === null || activeTab === value;
+    const visibility = use(SettingsTabsVisibilityContext);
+    const active = visibility
+        ? visibility.activeTab === value
+        : activeTab === null || activeTab === value;
+    const kept = visibility?.keptTabs.has(value) === true;
     const [visited, setVisited] = useState(active);
     if (active && !visited) {
         setVisited(true);
     }
     const scrollRef = useRef<HTMLDivElement | null>(null);
-    useRouteScrollMemory(scrollRef, `settings:${value}`);
+    useRouteScrollMemory(scrollRef, `settings:${value}`, active);
 
     return (
         <TabsContent
             ref={scrollRef}
             value={value}
-            keepMounted
+            keepMounted={kept || visited || undefined}
             data-settings-tab={value}
             className="m-0 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-7 overflow-x-hidden overflow-y-auto px-px pt-1 pb-4 data-hidden:hidden [&>[data-slot=card]]:shrink-0"
         >
-            {visited ? (
+            {visited || kept ? (
                 <Activity mode={active ? 'visible' : 'hidden'}>
                     {children}
                 </Activity>

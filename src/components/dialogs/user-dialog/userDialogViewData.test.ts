@@ -7,6 +7,7 @@ import { activePresence } from '@/test/presenceFixtures';
 import type { UserDialogAvatarReleaseStatus } from './userDialogListOptions';
 import {
     buildUserDialogListViewData,
+    buildUserDialogGroupSummary,
     buildUserDialogProfileSummary,
     buildUserDialogTabs
 } from './userDialogViewData';
@@ -221,11 +222,6 @@ describe('userDialogViewData', () => {
                     }
                 ]
             },
-            sortedProfileGroups: [
-                { id: 'grp_owned', name: 'Owned', ownerId: 'usr_me' },
-                { id: 'grp_mutual', name: 'Mutual', mutualGroup: true },
-                { id: 'grp_regular', name: 'Regular' }
-            ],
             mutualFriends: [{ id: 'usr_one' }, { id: 'usr_two' }],
             isCurrentUser: true,
             vrchatConfigConstants: {
@@ -248,15 +244,6 @@ describe('userDialogViewData', () => {
             'Old Name - 2026-01-02 03:04:05\nProfile Name'
         );
         expect(summary.statusStateText).toBe('Online on website / Join Me');
-        expect(
-            summary.userGroupSections.ownGroups.map((group) => group.id)
-        ).toEqual(['grp_owned']);
-        expect(summary.userGroupSections.mutualGroups).toEqual([]);
-        expect(
-            summary.userGroupSections.remainingGroups.map((group) => group.id)
-        ).toEqual(['grp_mutual', 'grp_regular']);
-        expect(summary.ownGroupCountText).toBe('1/3');
-        expect(summary.remainingGroupCountText).toBe('2/10');
         expect(summary.userTimeSpent).toBe(3000);
         expect(summary.userJoinCount).toBe(9);
         expect(summary.lastSeen).toBe('2026-01-02T03:04:05');
@@ -267,6 +254,40 @@ describe('userDialogViewData', () => {
         expect(summary.friendNumber).toBe(42);
         expect(summary.presenceActivityAt).toBe('2026-01-03T04:05:06');
         expect(summary.relationshipHistory).toEqual([]);
+    });
+
+    it('splits own, mutual and remaining groups with their limits', () => {
+        const groupSummary = buildUserDialogGroupSummary({
+            profile: { id: 'usr_me' },
+            sortedProfileGroups: [
+                { id: 'grp_owned', name: 'Owned', ownerId: 'usr_me' },
+                { id: 'grp_mutual', name: 'Mutual', mutualGroup: true },
+                { id: 'grp_regular', name: 'Regular' }
+            ],
+            isCurrentUser: true,
+            vrchatConfigConstants: {
+                GROUPS: {
+                    MAX_OWNED: 3,
+                    MAX_JOINED: 5,
+                    MAX_JOINED_PLUS: 10
+                }
+            },
+            currentUserSnapshot: {
+                tags: ['system_supporter']
+            }
+        });
+
+        expect(
+            groupSummary.userGroupSections.ownGroups.map((group) => group.id)
+        ).toEqual(['grp_owned']);
+        expect(groupSummary.userGroupSections.mutualGroups).toEqual([]);
+        expect(
+            groupSummary.userGroupSections.remainingGroups.map(
+                (group) => group.id
+            )
+        ).toEqual(['grp_mutual', 'grp_regular']);
+        expect(groupSummary.ownGroupCountText).toBe('1/3');
+        expect(groupSummary.remainingGroupCountText).toBe('2/10');
     });
 
     it('merges current-user API history with locally observed names', () => {
@@ -283,7 +304,6 @@ describe('userDialogViewData', () => {
                     }
                 ]
             },
-            sortedProfileGroups: [],
             isCurrentUser: true,
             vrchatConfigConstants: {},
             currentUserSnapshot: {

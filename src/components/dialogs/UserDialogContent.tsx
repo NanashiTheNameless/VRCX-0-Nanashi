@@ -52,6 +52,7 @@ import type {
 import { UserDialogTabbedView } from './UserDialogTabbedView';
 
 const userDialogSkeletonDelayMs = 160;
+const EMPTY_LOCATION_PANEL = createEmptyUserDialogLocationPanel();
 
 export function UserDialogContent({
     userId,
@@ -279,8 +280,15 @@ export function UserDialogContent({
             });
         }
     }, [currentEndpoint, isCurrentUser, isFriend, profile]);
-    const friendRequestState = resolveFriendRequestState(profile);
-    const platform = resolvePlatformMeta(profile?.$platform);
+    const friendRequestState = useMemo(
+        () => resolveFriendRequestState(profile),
+        [profile]
+    );
+    const profilePlatform = profile?.$platform;
+    const platform = useMemo(
+        () => resolvePlatformMeta(profilePlatform),
+        [profilePlatform]
+    );
     const PlatformIcon = platform.icon;
     const imageUrl = userImage(profile, 512);
     const { memo, editMemo, memoDialog } = useUserDialogMemoState({
@@ -372,7 +380,7 @@ export function UserDialogContent({
         (!presenceLocation ||
             isSameLocationTag(locationPanel.location, presenceLocation))
             ? locationPanel
-            : createEmptyUserDialogLocationPanel();
+            : EMPTY_LOCATION_PANEL;
     return (
         <>
             <UserDialogTabbedView

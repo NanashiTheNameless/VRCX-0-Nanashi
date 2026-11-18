@@ -69,6 +69,7 @@ What happened in the instances you were in, read from VRChat's own log while the
   video list is too long to fit, **Show all** expands it and **Show less** shrinks it back.
   Expand a session for every event. A session marked **Other device** was recorded from your online status
   while VRChat was not running on this PC, so it has no player or video details.
+  Event details load as sessions approach the visible area while you scroll.
 - **Table view** lists every entry. Right-click to open a logged link, copy the detail, show the
   instance's history or delete the entry.
 - Game log recording can be turned off under Settings > Advanced > Storage & cleanup. To fill in
