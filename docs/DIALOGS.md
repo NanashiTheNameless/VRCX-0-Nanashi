@@ -97,6 +97,8 @@ The developer's own user dialog always uses a black, white and red color scheme.
   mostly speak a language on your profile, then the busiest. Languages show by name, with
   short codes in table columns. The pin button next to it pins the world to the side panel
   to keep watching its instances.
+  Instance rows update when their details change; action and information tooltips appear
+  when you hover over or focus their controls.
 - **Screenshots** you took in this world.
 - **JSON**.
 
@@ -140,6 +142,9 @@ The developer's own user dialog always uses a black, white and red color scheme.
   your last visit, open instances, and past and upcoming events.
 - **Events**, **Posts** and **Photos**.
 - **JSON**.
+
+Visited group tabs keep their contents while the dialog stays open. Hidden tabs catch up
+when you return, and switching to another group clears the set of retained tabs.
 
 ### Actions
 

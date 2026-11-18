@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { LocationObjectRecord } from '@/components/location/locationModel';
+import { MountOnIntent } from '@/components/MountOnIntent';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
@@ -63,10 +64,17 @@ function ActionButton({
     }
 
     return (
-        <Tooltip>
-            <TooltipTrigger render={<span>{button}</span>} />
-            <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
+        <MountOnIntent
+            trigger="hover"
+            render={(child) => (
+                <Tooltip>
+                    <TooltipTrigger render={child} />
+                    <TooltipContent>{label}</TooltipContent>
+                </Tooltip>
+            )}
+        >
+            <span>{button}</span>
+        </MountOnIntent>
     );
 }
 
