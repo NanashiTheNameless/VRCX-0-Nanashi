@@ -4,7 +4,6 @@ import {
     type ComponentType,
     type CSSProperties,
     createContext,
-    memo,
     type ReactNode,
     use,
     useEffect,
@@ -146,39 +145,6 @@ export type EntityDialogTab = {
 const EMPTY_KEPT_TABS: ReadonlySet<string> = new Set();
 const EntityDialogKeptTabsContext = createContext(EMPTY_KEPT_TABS);
 
-const EntityDialogFreezeWhenHidden = memo(
-    function EntityDialogFreezeWhenHidden({
-        children
-    }: {
-        active: boolean;
-        children: ReactNode;
-    }) {
-        return children;
-    },
-    (prev, next) => !prev.active && !next.active
-);
-
-function useEntityDialogVisitedTabs(activeTab: string, resetKey: string) {
-    const [state, setState] = useState<{
-        resetKey: string;
-        visited: ReadonlySet<string>;
-    }>(() => ({ resetKey, visited: new Set([activeTab]) }));
-    if (state.resetKey !== resetKey) {
-        const next = { resetKey, visited: new Set([activeTab]) };
-        setState(next);
-        return next.visited;
-    }
-    if (!state.visited.has(activeTab)) {
-        const next = {
-            resetKey,
-            visited: new Set([...state.visited, activeTab])
-        };
-        setState(next);
-        return next.visited;
-    }
-    return state.visited;
-}
-
 function EntityDialogTabs({
     value,
     onValueChange,
@@ -198,7 +164,7 @@ function EntityDialogTabs({
         <TabsList
             variant="underline"
             className={cn(
-                'relative flex h-11 min-h-11 w-full justify-start overflow-x-auto overflow-y-hidden rounded-none bg-transparent p-0',
+                'no-scrollbar relative flex h-11 min-h-11 w-full justify-start overflow-x-auto overflow-y-hidden rounded-none bg-transparent p-0',
                 actions ? 'min-w-0 flex-1' : 'border-b'
             )}
         >
@@ -206,7 +172,7 @@ function EntityDialogTabs({
                 <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="text-muted-foreground hover:text-foreground h-11 flex-none rounded-none border-0 bg-transparent px-3 shadow-none after:hidden data-active:bg-transparent data-active:shadow-none"
+                    className="text-muted-foreground hover:text-foreground h-11 flex-none rounded-none border-0 bg-transparent px-2.5 shadow-none after:hidden data-active:bg-transparent data-active:shadow-none"
                 >
                     {tab.label}
                 </TabsTrigger>
@@ -303,7 +269,7 @@ function EntityMemoTextarea({
     return (
         <div className="box-border flex w-full cursor-default items-center p-1.5 text-sm">
             <div className="min-w-0 flex-1">
-                <span className="block truncate leading-5 font-medium">
+                <span className="text-muted-foreground block truncate text-xs leading-5 font-medium">
                     {label}
                 </span>
                 <Textarea
@@ -646,7 +612,7 @@ function EntityInfoBlock({
             {onClick ? (
                 <ChevronRightIcon
                     data-icon="inline-end"
-                    className="text-muted-foreground mt-0.5 ml-2 shrink-0 opacity-70 transition-transform group-hover/info-item:translate-x-0.5"
+                    className="text-muted-foreground mt-0.5 ml-2 shrink-0 opacity-40 transition-[opacity,transform] group-hover/info-item:translate-x-0.5 group-hover/info-item:opacity-80 group-focus-visible/info-item:opacity-80"
                 />
             ) : null}
         </Component>
@@ -659,7 +625,6 @@ export {
     EntityActionSeparator,
     EntityActionSub,
     EntityBlank,
-    EntityDialogFreezeWhenHidden,
     EntityDialogScaffold,
     EntityDialogTabContent,
     EntityDialogTabs,
@@ -672,6 +637,5 @@ export {
     EntityInfoGrid,
     EntityMemoTextarea,
     EntityOverviewCard,
-    EntityRawJson,
-    useEntityDialogVisitedTabs
+    EntityRawJson
 };

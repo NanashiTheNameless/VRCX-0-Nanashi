@@ -8,6 +8,7 @@ import type { ComponentProps, MouseEvent, ReactNode } from 'react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DeferredDropdownMenu } from '@/components/DeferredDropdownMenu';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { TileLockOverlay } from '@/components/tile/TileLockOverlay';
 import { TileShell } from '@/components/tile/TileShell';
@@ -22,22 +23,20 @@ import {
     TILE_SELECT_TOGGLE,
     TILE_SELECT_TOGGLE_VISIBLE
 } from '@/shared/constants/selectableTile';
-import { HintTooltip } from '@/ui/hint-tooltip';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import { Card, CardContent } from '@/ui/shadcn/card';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import {
-    DropdownMenu,
     DropdownMenuContent,
     DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuTrigger
+    DropdownMenuItem
 } from '@/ui/shadcn/dropdown-menu';
 
 export type MediaAssetBadge = {
     key?: string;
     label: string;
+    icon?: ReactNode;
     variant?: ComponentProps<typeof Badge>['variant'];
 };
 
@@ -95,21 +94,19 @@ function TileActionsMenu({
     }
 
     return (
-        <DropdownMenu>
-            <HintTooltip label={label ?? t('accessibility.more')}>
-                <DropdownMenuTrigger
-                    render={
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon-sm"
-                            className="bg-background/70"
-                        >
-                            <MoreHorizontalIcon data-icon="inline-start" />
-                        </Button>
-                    }
-                />
-            </HintTooltip>
+        <DeferredDropdownMenu
+            label={label ?? t('accessibility.more')}
+            trigger={
+                <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-sm"
+                    className="bg-background/70"
+                >
+                    <MoreHorizontalIcon data-icon="inline-start" />
+                </Button>
+            }
+        >
             <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuGroup>
                     {visibleActions.map((action) => (
@@ -131,7 +128,7 @@ function TileActionsMenu({
                     ))}
                 </DropdownMenuGroup>
             </DropdownMenuContent>
-        </DropdownMenu>
+        </DeferredDropdownMenu>
     );
 }
 
@@ -319,8 +316,9 @@ export function MediaAssetTile({
                             key={badge.key || badge.label}
                             variant={badge.variant || 'outline'}
                             className="bg-background/80"
+                            aria-label={badge.icon ? badge.label : undefined}
                         >
-                            {badge.label}
+                            {badge.icon ?? badge.label}
                         </Badge>
                     ))}
                 </div>

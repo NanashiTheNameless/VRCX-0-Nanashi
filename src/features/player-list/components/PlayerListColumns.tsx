@@ -40,9 +40,9 @@ import { getNameColour, openExternalLink } from '@/services/entityMediaService';
 import { TRUST_COLOR_ENTRIES } from '@/shared/constants/trustColors';
 import type { UserNameColourStyle } from '@/shared/utils/entityMedia';
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { HintTooltip, IntentTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { resolvePlatformMode, resolveStatusMeta } from '../playerListDisplay';
 import { playerGroupRoleOrder } from '../playerListGroupRoles';
@@ -149,27 +149,9 @@ function MutualFriendsCell({ row }: { row: AppRow<PlayerListRow> }) {
         .map((friend) => friend.displayName)
         .join(t('user_hover_card.name_separator'));
     return (
-        <Tooltip>
-            <TooltipTrigger
-                render={
-                    <span className="flex min-w-0 items-center gap-1.5">
-                        <MutualFriendAvatars friends={mutuals.friends} />
-                        {mutuals.community ? (
-                            <span
-                                className="size-2 shrink-0 rounded-full"
-                                style={{
-                                    backgroundColor: mutuals.community.color
-                                }}
-                            />
-                        ) : null}
-                        <span className="text-sm tabular-nums">
-                            {mutuals.count}
-                        </span>
-                    </span>
-                }
-            />
-            <TooltipContent>
-                {mutuals.community
+        <IntentTooltip
+            content={
+                mutuals.community
                     ? t('view.player_list.mutual_friends.cell_tooltip_circle', {
                           names,
                           count: mutuals.count,
@@ -178,9 +160,22 @@ function MutualFriendsCell({ row }: { row: AppRow<PlayerListRow> }) {
                     : t('view.player_list.mutual_friends.cell_tooltip', {
                           names,
                           count: mutuals.count
-                      })}
-            </TooltipContent>
-        </Tooltip>
+                      })
+            }
+        >
+            <span className="flex min-w-0 items-center gap-1.5">
+                <MutualFriendAvatars friends={mutuals.friends} />
+                {mutuals.community ? (
+                    <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{
+                            backgroundColor: mutuals.community.color
+                        }}
+                    />
+                ) : null}
+                <span className="text-sm tabular-nums">{mutuals.count}</span>
+            </span>
+        </IntentTooltip>
     );
 }
 
@@ -217,29 +212,23 @@ function PlayerFlag({
     suffix
 }: PlayerFlagProps) {
     return (
-        <Tooltip>
-            <TooltipTrigger
-                render={
-                    <span
-                        className={cn(
-                            'inline-flex shrink-0 items-center gap-0.5',
-                            className
-                        )}
-                        aria-label={label}
-                    >
-                        <Icon
-                            className={cn(
-                                'size-4',
-                                filled && 'fill-current',
-                                iconClassName
-                            )}
-                        />
-                        {suffix}
-                    </span>
-                }
-            />
-            <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
+        <HintTooltip label={label}>
+            <span
+                className={cn(
+                    'inline-flex shrink-0 items-center gap-0.5',
+                    className
+                )}
+            >
+                <Icon
+                    className={cn(
+                        'size-4',
+                        filled && 'fill-current',
+                        iconClassName
+                    )}
+                />
+                {suffix}
+            </span>
+        </HintTooltip>
     );
 }
 
@@ -380,33 +369,30 @@ function BioLinksCell({ row }: { row: AppRow<PlayerListRow> }) {
                       const linkLabel = String(link ?? '');
 
                       return (
-                          <Tooltip key={`${linkLabel}:${index}`}>
-                              <TooltipTrigger
-                                  render={
-                                      <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon-xs"
-                                          aria-label={t(
-                                              'accessibility.open_link',
-                                              { link: linkLabel }
-                                          )}
-                                          onClick={(event) => {
-                                              event.stopPropagation();
-                                              openExternalLink(link);
-                                          }}
-                                      >
-                                          <BioLinkFavicon
-                                              link={link}
-                                              fallback={
-                                                  <ExternalLinkIcon data-icon="inline-start" />
-                                              }
-                                          />
-                                      </Button>
-                                  }
-                              />
-                              <TooltipContent>{linkLabel}</TooltipContent>
-                          </Tooltip>
+                          <IntentTooltip
+                              key={`${linkLabel}:${index}`}
+                              content={linkLabel}
+                          >
+                              <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={t('accessibility.open_link', {
+                                      link: linkLabel
+                                  })}
+                                  onClick={(event) => {
+                                      event.stopPropagation();
+                                      openExternalLink(link);
+                                  }}
+                              >
+                                  <BioLinkFavicon
+                                      link={link}
+                                      fallback={
+                                          <ExternalLinkIcon data-icon="inline-start" />
+                                      }
+                                  />
+                              </Button>
+                          </IntentTooltip>
                       );
                   })
                 : null}

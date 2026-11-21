@@ -9,15 +9,14 @@ import {
     RefreshCwIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { LocationObjectRecord } from '@/components/location/locationModel';
-import { MountOnIntent } from '@/components/MountOnIntent';
 import { cn } from '@/lib/utils';
+import { IntentTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { InstanceActionSummary } from './InstanceActionSummary';
 import { InstanceAnnouncementDialog } from './InstanceAnnouncementDialog';
@@ -27,8 +26,12 @@ import {
     type InstanceActionBarControllerInput
 } from './useInstanceActionBarController';
 
+type InstanceActionVariant = 'compact' | 'prominent';
+
 function ActionButton({
     label,
+    text,
+    variant = 'compact',
     disabled = false,
     disableTooltip = false,
     loading = false,
@@ -36,18 +39,28 @@ function ActionButton({
     onClick
 }: {
     label: string;
+    text?: string;
+    variant?: InstanceActionVariant;
     disabled?: boolean;
     disableTooltip?: boolean;
     loading?: boolean;
     icon: LucideIcon;
     onClick?: () => void;
 }) {
+    const prominent = variant === 'prominent';
+    const showText = prominent && Boolean(text);
     const button = (
         <Button
             type="button"
-            size="icon-xs"
+            size={showText ? 'sm' : prominent ? 'icon-sm' : 'icon-xs'}
             variant="ghost"
-            aria-label={label}
+            className={
+                prominent
+                    ? "text-muted-foreground [&_svg:not([class*='size-'])]:size-3.5"
+                    : undefined
+            }
+            aria-label={showText ? undefined : label}
+            title={showText && label !== text ? label : undefined}
             disabled={disabled || loading}
             onClick={onClick}
         >
@@ -56,25 +69,18 @@ function ActionButton({
             ) : (
                 <Icon data-icon="inline-start" />
             )}
+            {showText ? text : null}
         </Button>
     );
 
-    if (disableTooltip) {
+    if (disableTooltip || showText) {
         return button;
     }
 
     return (
-        <MountOnIntent
-            trigger="hover"
-            render={(child) => (
-                <Tooltip>
-                    <TooltipTrigger render={child} />
-                    <TooltipContent>{label}</TooltipContent>
-                </Tooltip>
-            )}
-        >
+        <IntentTooltip content={label}>
             <span>{button}</span>
-        </MountOnIntent>
+        </IntentTooltip>
     );
 }
 
@@ -98,7 +104,9 @@ export function InstanceActionBar({
     refreshTooltip = 'Refresh instance info',
     historyTooltip = 'Previous instance history',
     onRefresh,
-    onHistory
+    onHistory,
+    actionVariant = 'compact',
+    renderLayout
 }: {
     className?: string;
     target?: LocationObjectRecord | null;
@@ -120,6 +128,11 @@ export function InstanceActionBar({
     historyTooltip?: string;
     onRefresh?: InstanceActionBarControllerInput['onRefresh'];
     onHistory?: () => void;
+    actionVariant?: InstanceActionVariant;
+    renderLayout?: (parts: {
+        summary: ReactNode;
+        actions: ReactNode;
+    }) => ReactNode;
 }) {
     const { t } = useTranslation();
     const [calendarLinkOpen, setCalendarLinkOpen] = useState(false);
@@ -198,17 +211,13 @@ export function InstanceActionBar({
         />
     );
 
-    return (
-        <div
-            className={cn(
-                'inline-flex items-center gap-1.5 align-middle',
-                className
-            )}
-        >
-            {instanceInfoPlacement === 'start' ? instanceSummary : null}
+    const actionButtons = (
+        <>
             {canShowLaunchAction ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={t('dialog.instance.action.launch_instance')}
+                    text={t('component.instance_action_bar.join')}
                     icon={LogInIcon}
                     disableTooltip={disableTooltip}
                     loading={busy === 'launch'}
@@ -218,6 +227,7 @@ export function InstanceActionBar({
             ) : null}
             {canOpenInstanceInGame ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={t('dialog.instance.action.open_in_game')}
                     icon={Gamepad2Icon}
                     disableTooltip={disableTooltip}
@@ -230,7 +240,9 @@ export function InstanceActionBar({
             ) : null}
             {showInvite && actionTarget.isRealInviteLocation ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={t('dialog.instance.label.self_invite')}
+                    text={t('dialog.instance.label.self_invite')}
                     icon={MailIcon}
                     disableTooltip={disableTooltip}
                     loading={busy === 'invite'}
@@ -242,6 +254,7 @@ export function InstanceActionBar({
             ) : null}
             {canRename && actionTarget.isRealInstanceLocation ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={t('component.instance_action_bar.rename.header')}
                     icon={PencilIcon}
                     disableTooltip={disableTooltip}
@@ -254,6 +267,7 @@ export function InstanceActionBar({
             ) : null}
             {canLinkCalendarEvent && actionTarget.isRealInstanceLocation ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={t(
                         'component.instance_action_bar.calendar_link.header'
                     )}
@@ -278,7 +292,9 @@ export function InstanceActionBar({
             ) : null}
             {showRefresh && actionTarget.isRealInstanceLocation ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={refreshTooltip}
+                    text={t('common.actions.refresh')}
                     icon={RefreshCwIcon}
                     disableTooltip={disableTooltip}
                     loading={busy === 'refresh'}
@@ -290,6 +306,7 @@ export function InstanceActionBar({
             ) : null}
             {showHistory ? (
                 <ActionButton
+                    variant={actionVariant}
                     label={historyTooltip}
                     icon={HistoryIcon}
                     disableTooltip={disableTooltip}
@@ -297,7 +314,10 @@ export function InstanceActionBar({
                     onClick={onHistory}
                 />
             ) : null}
-            {instanceInfoPlacement === 'start' ? null : instanceSummary}
+        </>
+    );
+    const instanceDialogs = (
+        <>
             {canAnnounce ? (
                 <InstanceAnnouncementDialog
                     open={announcementOpen}
@@ -316,6 +336,32 @@ export function InstanceActionBar({
                     onSubmit={setCalendarLink}
                 />
             ) : null}
+        </>
+    );
+
+    if (renderLayout) {
+        return (
+            <>
+                {renderLayout({
+                    summary: instanceSummary,
+                    actions: actionButtons
+                })}
+                {instanceDialogs}
+            </>
+        );
+    }
+
+    return (
+        <div
+            className={cn(
+                'inline-flex items-center gap-1.5 align-middle',
+                className
+            )}
+        >
+            {instanceInfoPlacement === 'start' ? instanceSummary : null}
+            {actionButtons}
+            {instanceInfoPlacement === 'start' ? null : instanceSummary}
+            {instanceDialogs}
         </div>
     );
 }

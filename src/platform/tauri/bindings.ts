@@ -1323,7 +1323,7 @@ export const commands = {
     appRuntimeDiscordReconcileRequest: () =>
         __TAURI_INVOKE<number>('app__runtime_discord_reconcile_request'),
     appExternalApiAvatarSearchGet: (input: ExternalApiAvatarSearchInput) =>
-        __TAURI_INVOKE<ExternalApiExecuteResponse>(
+        __TAURI_INVOKE<ExternalApiAvatarSearchResponse>(
             'app__external_api_avatar_search_get',
             { input }
         ),
@@ -4623,6 +4623,13 @@ export type EntityKind = 'user' | 'world';
 export type ExternalApiAvatarSearchInput = {
     url?: string;
     vrcxId?: string;
+};
+
+export type ExternalApiAvatarSearchResponse = {
+    status: number;
+    data: string;
+    raw: JsonValue;
+    serverBlocked: boolean;
 };
 
 export type ExternalApiCodeSearchInput = {

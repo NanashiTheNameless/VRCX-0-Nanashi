@@ -39,8 +39,8 @@ The sidebar lists your friends and groups in tabs.
   **Possibly Offline**.
 - **Groups** shows your groups' open instances.
 - Its settings can group friends in the same instance, split favorites by favorite group, also
-  show grouped friends in other sections, place the same-instance section above favorites, and
-  sort by one rule then another.
+  show grouped friends in other sections, place the same-instance section above favorites,
+  switch to a **Compact Friend List** with smaller rows, and sort by one rule then another.
 - **Customize tabs** reorders the tabs and adds your own tabs built from VRChat or local
   favorite groups. Tabs can show an icon, text or both. Friends and Groups are built in.
 - **Pinned worlds**: pin a world from its world dialog and it gets a tab of its own, showing the

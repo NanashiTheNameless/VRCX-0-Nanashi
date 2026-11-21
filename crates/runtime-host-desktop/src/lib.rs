@@ -61,7 +61,10 @@ pub use background_image::{
 };
 pub use context::DesktopRuntimeServices;
 pub use database_upgrade::{DatabaseUpgradeLifecycle, DesktopDatabaseUpgradeRuntime};
-pub use external_api::{CodeSearchProvider, ExternalApiExecuteResponse, ExternalApiRuntime};
+pub use external_api::{
+    CodeSearchProvider, ExternalApiAvatarSearchResponse, ExternalApiExecuteResponse,
+    ExternalApiRuntime,
+};
 pub use game_client::{GameClientHostRuntime, GameClientHostRuntimeDeps};
 pub use game_isolation::{GameIsolationRuntime, GameIsolationSnapshot, LocalGameAccount};
 pub use game_log::{GameLogHostRuntime, GameLogHostRuntimeDeps};

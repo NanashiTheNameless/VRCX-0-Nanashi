@@ -3,30 +3,29 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EconomyStoreListings } from '@/components/economy/EconomyStoreListings';
+import { FreezeWhenHidden } from '@/components/FreezeWhenHidden';
 import { useLanguageNames } from '@/components/language/useLanguageNames';
 import { FadeInImage } from '@/components/media/FadeInImage';
-import { MountOnIntent } from '@/components/MountOnIntent';
 import { TranslatableText } from '@/components/translation/TranslatableText';
 import type {
     GroupAnnouncementRecord,
     GroupProfileRecord
 } from '@/domain/entities/group';
 import { formatDateFilter } from '@/lib/dateTime';
+import { useVisitedTabs } from '@/lib/useVisitedTabs';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
+import { IntentTooltip } from '@/ui/hint-tooltip';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
 import { Skeleton } from '@/ui/shadcn/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
-    EntityDialogFreezeWhenHidden,
     EntityDialogTabContent,
     EntityDialogTabs,
     EntityInfoBlock,
     EntityInfoGrid,
-    EntityRawJson,
-    useEntityDialogVisitedTabs
+    EntityRawJson
 } from '../EntityDialogScaffold';
 import { PreviousInstancesPanel } from '../PreviousInstancesTableDialog';
 import { GroupEventsTab, GroupEventSummary } from './GroupDialogEvents';
@@ -65,7 +64,9 @@ function GroupOverviewSection({
     return (
         <section className="bg-card/40 flex min-w-0 flex-col gap-2 rounded-md border p-3">
             <div className="flex min-w-0 items-center justify-between gap-2">
-                <div className="truncate text-sm font-medium">{title}</div>
+                <div className="text-muted-foreground truncate text-xs font-medium">
+                    {title}
+                </div>
                 {action}
             </div>
             <div className="min-w-0">{children}</div>
@@ -133,24 +134,14 @@ function GroupAnnouncementPanel({
             </div>
             <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                 {roleNames.length ? (
-                    <MountOnIntent
-                        trigger="hover"
-                        render={(child) => (
-                            <Tooltip>
-                                <TooltipTrigger render={child} />
-                                <TooltipContent>
-                                    {roleNames.join(', ')}
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                    >
+                    <IntentTooltip content={roleNames.join(', ')}>
                         <Badge variant="outline" className="max-w-full">
                             <EyeIcon data-icon="inline-start" />
                             <span className="truncate">
                                 {roleNames.join(', ')}
                             </span>
                         </Badge>
-                    </MountOnIntent>
+                    </IntentTooltip>
                 ) : null}
                 {authorId || authorLabel ? (
                     authorId ? (
@@ -271,7 +262,7 @@ export function GroupDialogTabPanels({
     const tags = Array.isArray(group.tags) ? group.tags : [];
     const roles = Array.isArray(group.roles) ? group.roles : [];
     const [bannerFailed, setBannerFailed] = useState(false);
-    const visitedTabs = useEntityDialogVisitedTabs(activeTab, group.id);
+    const visitedTabs = useVisitedTabs(activeTab, group.id);
 
     useEffect(() => {
         setBannerFailed(false);
@@ -288,7 +279,7 @@ export function GroupDialogTabPanels({
                 value="overview"
                 className="flex flex-col gap-4 pt-3"
             >
-                <EntityDialogFreezeWhenHidden active={activeTab === 'overview'}>
+                <FreezeWhenHidden active={activeTab === 'overview'}>
                     {bannerUrl && !bannerFailed ? (
                         <Button
                             type="button"
@@ -565,13 +556,13 @@ export function GroupDialogTabPanels({
                             ) : null}
                         </EntityInfoGrid>
                     </GroupOverviewSection>
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
             <EntityDialogTabContent
                 value="events"
                 className="flex flex-col gap-3 pt-3"
             >
-                <EntityDialogFreezeWhenHidden active={activeTab === 'events'}>
+                <FreezeWhenHidden active={activeTab === 'events'}>
                     <GroupEventsTab
                         events={groupEvents}
                         status={groupEventsStatus}
@@ -584,15 +575,13 @@ export function GroupDialogTabPanels({
                         onEdit={onEditEvent}
                         onDelete={onDeleteEvent}
                     />
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
             <EntityDialogTabContent
                 value="instance-history"
                 className="flex min-h-0 flex-col"
             >
-                <EntityDialogFreezeWhenHidden
-                    active={activeTab === 'instance-history'}
-                >
+                <FreezeWhenHidden active={activeTab === 'instance-history'}>
                     <PreviousInstancesPanel
                         title={t('dialog.previous_instances.header')}
                         instances={previousInstances}
@@ -600,13 +589,13 @@ export function GroupDialogTabPanels({
                         onRowsChange={onPreviousInstancesChange}
                         className="flex-1"
                     />
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
             <EntityDialogTabContent
                 value="posts"
                 className="flex flex-col gap-2"
             >
-                <EntityDialogFreezeWhenHidden active={activeTab === 'posts'}>
+                <FreezeWhenHidden active={activeTab === 'posts'}>
                     <div className="flex items-center gap-2">
                         <div className="text-muted-foreground text-sm">
                             {filteredPosts.length}/{posts.length}{' '}
@@ -634,10 +623,10 @@ export function GroupDialogTabPanels({
                         onEditPost={onEditPost}
                         onDeletePost={onDeletePost}
                     />
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
             <EntityDialogTabContent value="members">
-                <EntityDialogFreezeWhenHidden active={activeTab === 'members'}>
+                <FreezeWhenHidden active={activeTab === 'members'}>
                     <GroupMembersPanel
                         active={activeTab === 'members'}
                         group={group}
@@ -647,13 +636,13 @@ export function GroupDialogTabPanels({
                         onQueryChange={onSearchMembersChange}
                         onRefresh={onRefreshMembers}
                     />
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
             <EntityDialogTabContent
                 value="photos"
                 className="flex flex-col gap-2"
             >
-                <EntityDialogFreezeWhenHidden active={activeTab === 'photos'}>
+                <FreezeWhenHidden active={activeTab === 'photos'}>
                     <GroupGalleryPanel
                         group={group}
                         rows={photos}
@@ -664,21 +653,19 @@ export function GroupDialogTabPanels({
                         onGalleriesChanged={onGalleriesChanged}
                         onImagesChanged={onPhotosChanged}
                     />
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
             {group.storeId ? (
                 <EntityDialogTabContent value="store">
-                    <EntityDialogFreezeWhenHidden
-                        active={activeTab === 'store'}
-                    >
+                    <FreezeWhenHidden active={activeTab === 'store'}>
                         <EconomyStoreListings storeId={group.storeId} />
-                    </EntityDialogFreezeWhenHidden>
+                    </FreezeWhenHidden>
                 </EntityDialogTabContent>
             ) : null}
             <EntityDialogTabContent value="json">
-                <EntityDialogFreezeWhenHidden active={activeTab === 'json'}>
+                <FreezeWhenHidden active={activeTab === 'json'}>
                     <EntityRawJson value={group} />
-                </EntityDialogFreezeWhenHidden>
+                </FreezeWhenHidden>
             </EntityDialogTabContent>
         </EntityDialogTabs>
     );

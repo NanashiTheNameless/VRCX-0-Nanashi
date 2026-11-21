@@ -23,12 +23,12 @@ import type {
     UserHeaderCommands,
     UserHeaderModel
 } from '@/components/dialogs/user-dialog/components/UserDialogHeaderSection';
+import { SidebarUserRowContent } from '@/components/sidebar/friends-sidebar/SidebarUserRowContent';
 import {
     GlobalBadgeChip,
     DeveloperBadge,
     UserBadges
 } from '@/components/UserBadges';
-import { UserDetailContent } from '@/components/UserDetailTile';
 import {
     AWARD_ANIMATIONS,
     DEFAULT_AWARD_ICON,
@@ -1558,7 +1558,7 @@ function Editor() {
                     </div>
                 ) : null}
                 <div className="flex w-96 items-center gap-2 rounded-md border px-2 py-1.5">
-                    <UserDetailContent
+                    <SidebarUserRowContent
                         userId={previewUserId}
                         imageUrl={live?.icon ?? ''}
                         displayName={previewName}

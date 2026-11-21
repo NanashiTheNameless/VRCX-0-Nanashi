@@ -114,7 +114,9 @@ Search VRChat by:
 - **World**, by name or by category, optionally including Community Labs.
 - **Avatar**, through the avatar search provider set under Settings > Integrations > Remote
   Avatar Database (VRChat itself has no avatar search). Type at least 3 characters; filter
-  public, private or all, and sort by name.
+  public, private or all, and sort by name. If the provider's server blocks the request (for
+  example a Cloudflare block or challenge page), the app says so; try again later or switch
+  providers.
 - **Group**.
 - **Explore** shows popular and newly discovered worlds with their instance counts, and can
   shuffle them. The top world is featured in a larger card. Cards show which friends are in

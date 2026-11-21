@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use vrcx_0_application::avatars::cloudflare_block;
 use vrcx_0_application_core::{
     Error, Result, RuntimeDiagnostics, RuntimeOperationStatus, RuntimeSyncEngine, WebClient,
 };
 use vrcx_0_integrations::external_api::{self, ExternalHttpRequestInput};
 
-pub use vrcx_0_integrations::external_api::{CodeSearchProvider, ExternalApiExecuteResponse};
+pub use vrcx_0_integrations::external_api::{
+    CodeSearchProvider, ExternalApiAvatarSearchResponse, ExternalApiExecuteResponse,
+};
 
 #[derive(Clone)]
 pub struct ExternalApiRuntime {
@@ -32,18 +35,27 @@ impl ExternalApiRuntime {
         &self,
         url: String,
         vrcx_id: String,
-    ) -> Result<ExternalApiExecuteResponse> {
-        self.execute(
-            "app__external_api_avatar_search_get",
-            "Searching external avatar provider.",
-            external_api::ExternalApiScope::AvatarSearch,
-            || {
-                let url = require_text(url, "ExternalApiAvatarSearchGet requires url.")?;
-                let vrcx_id = require_text(vrcx_id, "ExternalApiAvatarSearchGet requires vrcxId.")?;
-                Ok(external_api::avatar_search_get_input(&url, &vrcx_id))
-            },
-        )
-        .await
+    ) -> Result<ExternalApiAvatarSearchResponse> {
+        let response = self
+            .execute(
+                "app__external_api_avatar_search_get",
+                "Searching external avatar provider.",
+                external_api::ExternalApiScope::AvatarSearch,
+                || {
+                    let url = require_text(url, "ExternalApiAvatarSearchGet requires url.")?;
+                    let vrcx_id =
+                        require_text(vrcx_id, "ExternalApiAvatarSearchGet requires vrcxId.")?;
+                    Ok(external_api::avatar_search_get_input(&url, &vrcx_id))
+                },
+            )
+            .await?;
+        let server_blocked = response.status != 200 && cloudflare_block(&response.data).is_some();
+        Ok(ExternalApiAvatarSearchResponse {
+            status: response.status,
+            data: response.data,
+            raw: response.raw,
+            server_blocked,
+        })
     }
 
     pub async fn youtube_video_metadata(

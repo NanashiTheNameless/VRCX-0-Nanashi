@@ -1399,6 +1399,7 @@
             "favorites_section": "Favorites",
             "group_by_instance": "Group Friends in the Same Instance",
             "split_favorite_friends": "Split Favorites by Group",
+            "compact_rows": "Compact Friend List",
             "show_grouped_friends": "Also Show in Other Sections",
             "same_instance_above_favorites": "Place Same Instance Above Favorites",
             "sort_secondary": "Then by",
@@ -1967,6 +1968,7 @@
                 "failed_to_search_worlds": "Failed to search worlds",
                 "failed_to_search_groups": "Failed to search groups",
                 "failed_to_search_avatars": "Failed to search avatars",
+                "avatar_provider_blocked": "The avatar provider's server blocked this request. Try again later or switch providers.",
                 "failed_to_save_avatar_provider": "Failed to save avatar provider",
                 "failed_to_load_hot_worlds": "Failed to load hot worlds"
             }
@@ -7777,6 +7779,9 @@
             "worlds_description": "Screenshots grouped by world",
             "people": "People",
             "people_description": "Screenshots grouped by who was there",
+            "people_section_friends": "Friends",
+            "people_section_former_friends": "Former friends",
+            "people_section_others": "Others",
             "world_album_count": "{count} worlds",
             "people_album_count": "{count} people",
             "empty_albums": "Nothing to group yet",
@@ -8842,7 +8847,7 @@
         "online_location": "Online in {location}",
         "online": "Online",
         "offline": "Offline",
-        "status_update": "Status: {status} {description}",
+        "status_update": "Changed status to {status} {description}",
         "invite": "Invite to {location} {message}",
         "request_invite": "Invite request {message}",
         "invite_response": "Invite reply {message}",
@@ -8850,7 +8855,7 @@
         "friend_request": "Friend request",
         "friend": "Now friends",
         "unfriend": "No longer friends",
-        "trust_level": "Trust rank: {trustLevel}",
+        "trust_level": "Trust rank is now {trustLevel}",
         "display_name": "Renamed to {displayName}",
         "bio": "Updated bio",
         "sentence": {
@@ -8887,10 +8892,10 @@
         "group_role_updated": "The {role} role was changed",
         "group_queue_ready_title": "Instance Queue Ready",
         "group_instance_opened": "Created a new instance",
-        "group_instance_opened_location": "Created a new instance: {location}",
+        "group_instance_opened_location": "Created a new instance {location}",
         "group_instances_opened": "Created {count} new instances",
         "instance_closed_title": "Instance Closed",
-        "instance_closed_location": "Instance closed: {location}",
+        "instance_closed_location": "{location} closed",
         "event_title": "Event",
         "external_title": "External App",
         "video_play_title": "Video Play",
@@ -8898,7 +8903,7 @@
         "tracker_disconnected": "disconnected",
         "tracker_disconnected_battery": "disconnected · last battery {percent}%",
         "trackers_disconnected": "{count} disconnected",
-        "avatar_change": "Avatar: {avatar}",
+        "avatar_change": "Changed avatar to {avatar}",
         "blocked_player_joined": "Blocked user has joined",
         "blocked_player_left": "Blocked user has left",
         "muted_player_joined": "Muted user has joined",
@@ -9172,6 +9177,7 @@
             }
         },
         "instance_action_bar": {
+            "join": "Join",
             "toast": {
                 "failed_to_send_self_invite": "Failed to send self-invite",
                 "failed_to_refresh_instance": "Failed to refresh instance",

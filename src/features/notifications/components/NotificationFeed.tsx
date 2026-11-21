@@ -16,6 +16,7 @@ import { EmptyState, LoadingState } from '@/components/layout/PageScaffold';
 import { formatDateFilter } from '@/lib/dateTime';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useNowMs } from '@/lib/useNowMs';
+import { useStableCommands } from '@/lib/useStableCommands';
 import {
     displayDayKey,
     displayDateParts
@@ -108,6 +109,7 @@ export function NotificationFeed({
 }) {
     const { t } = useTranslation();
     const timeZone = usePreferencesStore((state) => state.dtTimeZone);
+    const stableHandlers = useStableCommands(handlers);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const scrolledAwayRef = useRef(false);
     // groupByDay reads the display timezone, so regroup when it changes.
@@ -131,7 +133,7 @@ export function NotificationFeed({
                 nested={nested}
                 currentUserId={currentUserId}
                 canInviteFromCurrentLocation={canInviteFromCurrentLocation}
-                handlers={handlers}
+                handlers={stableHandlers}
             />
         );
     }

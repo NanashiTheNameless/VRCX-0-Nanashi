@@ -11,9 +11,10 @@ top of the page, or pinned to the left navigation as its own item.
   [LAYOUT_AND_APPEARANCE.md](LAYOUT_AND_APPEARANCE.md#keyboard-shortcuts)). You can favorite,
   copy and delete screenshots, add a frame to one or several, and **send screenshots to Discord**
   through webhooks you set up (stored only on this PC), choosing what details to include and
-  the image quality.
+  the image quality. Albums group screenshots by world or by people; the **People** albums are
+  split into **Friends**, **Former friends** and **Others**.
 - **Gallery**: your VRChat photos, profile icons and prints. Upload (Ctrl+V pastes an image),
-  crop, select and delete.
+  crop, select and delete. Favorite prints show a star.
 - **Inventory**: your emojis, stickers, items and cosmetics. **Redeem** takes a code VRChat
   gave you and adds its item. **Check free items** looks at the VRChat store once and offers to
   claim free items you do not own yet, like **Check now** in Settings (see

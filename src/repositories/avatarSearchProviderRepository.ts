@@ -43,6 +43,13 @@ interface SearchInput {
     query: string;
 }
 
+export class AvatarProviderBlockedError extends Error {
+    constructor(status: number) {
+        super(`Avatar provider blocked the request (${status})`);
+        this.name = 'AvatarProviderBlockedError';
+    }
+}
+
 const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
 const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
 const VRCNDB_PROVIDER = 'https://db.vrcnext.com/api/vrcx';
@@ -381,6 +388,9 @@ async function searchProvider(
     });
     const json = parseResponse(response.data);
 
+    if (response.serverBlocked) {
+        throw new AvatarProviderBlockedError(response.status);
+    }
     if (response.status !== 200) {
         throw new Error(`Avatar search failed (${response.status})`);
     }

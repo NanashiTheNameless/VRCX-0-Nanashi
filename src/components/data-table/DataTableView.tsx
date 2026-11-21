@@ -133,21 +133,16 @@ export function DataTableColumnSizeColGroup<TData extends RowData>({
     );
 }
 
+const COLUMN_DND_POINTER_OPTIONS = { activationConstraint: { distance: 6 } };
+const COLUMN_DND_KEYBOARD_OPTIONS = {
+    coordinateGetter: sortableKeyboardCoordinates
+};
+
 function useColumnDndSensors() {
     return useSensors(
-        useSensor(MouseSensor, {
-            activationConstraint: {
-                distance: 6
-            }
-        }),
-        useSensor(TouchSensor, {
-            activationConstraint: {
-                distance: 6
-            }
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates
-        })
+        useSensor(MouseSensor, COLUMN_DND_POINTER_OPTIONS),
+        useSensor(TouchSensor, COLUMN_DND_POINTER_OPTIONS),
+        useSensor(KeyboardSensor, COLUMN_DND_KEYBOARD_OPTIONS)
     );
 }
 
@@ -177,10 +172,10 @@ export function DataTableColumnDndProvider<TData extends RowData>({
                 ? {
                       enabled: true,
                       items: reorderableColumnIds,
-                      table
+                      tableStore: table.store
                   }
                 : dataTableColumnDndDefaultState,
-        [canReorder, reorderableColumnIds, table]
+        [canReorder, reorderableColumnIds, table.store]
     );
 
     if (!canReorder) {
@@ -227,7 +222,7 @@ export function DataTableColumnSortableContext<TData extends RowData>({
 }) {
     const columnDnd = useDataTableColumnDnd();
 
-    if (!columnDnd.enabled || columnDnd.table !== table) {
+    if (!columnDnd.enabled || columnDnd.tableStore !== table.store) {
         return children;
     }
 

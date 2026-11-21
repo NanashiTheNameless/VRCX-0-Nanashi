@@ -10,7 +10,8 @@ import {
     friendOptionMatches
 } from './FriendMultiSelectList';
 
-vi.mock('react-i18next', () => ({
+vi.mock('react-i18next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('react-i18next')>()),
     useTranslation: () => ({
         t: (key: string, params?: Record<string, unknown>) =>
             params ? `${key}:${JSON.stringify(params)}` : key

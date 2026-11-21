@@ -1,9 +1,8 @@
-import { MountOnIntent } from '@/components/MountOnIntent';
 import { formatDateFilter } from '@/lib/dateTime';
 import type { DateFilterFormat } from '@/shared/utils/dateTime';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useShellStore } from '@/state/shellStore';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
+import { IntentTooltip } from '@/ui/hint-tooltip';
 
 export function useDateFormatPreferenceKey() {
     const timeZone = usePreferencesStore((state) => state.dtTimeZone);
@@ -38,18 +37,11 @@ export function TimestampText({
     }
 
     return (
-        <MountOnIntent
-            trigger="hover"
-            render={(child) => (
-                <Tooltip>
-                    <TooltipTrigger render={child} />
-                    <TooltipContent side={tooltipSide}>
-                        {formatDateFilter(value, 'long')}
-                    </TooltipContent>
-                </Tooltip>
-            )}
+        <IntentTooltip
+            side={tooltipSide}
+            content={formatDateFilter(value, 'long')}
         >
             <span className={className}>{text}</span>
-        </MountOnIntent>
+        </IntentTooltip>
     );
 }

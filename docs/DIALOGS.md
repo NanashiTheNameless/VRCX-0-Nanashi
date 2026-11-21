@@ -16,8 +16,9 @@ preview so it looks good when pasted; the plain VRChat link is always available 
 - The user's name, status (Online, Join Me, Ask Me, Do Not Disturb, online on another
   platform or the website, Offline), status text, pronouns, trust level and
   [badges](BADGES.md).
-- **Current location** with the instance, its creator, whether it is age-restricted or
-  closed, and who else is there. From here you can join (Launch/Invite) or invite yourself.
+- **Current location** with the world's thumbnail, the instance, its creator, whether it is
+  age-restricted or closed, and who else is there. From here you can join (Launch/Invite) or
+  invite yourself; the instance actions are labeled buttons such as **Join**.
 - **Info**: bio (with **Translate Bio** when translation is set up, and clickable bio links),
   languages, the group they represent, avatar info, home world, VRChat note and your **local
   note**, previous display names, status history, last seen, join count, **time together**
