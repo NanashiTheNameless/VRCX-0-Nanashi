@@ -197,7 +197,6 @@ export function UserDialogTabsSection({
     } = model;
     const { activeTab, tabCounts = {}, tabs = [] } = root;
     const {
-        bioLinks,
         currentAvatarDisplayName,
         hideUserMemos,
         hideUserNotes,
@@ -342,7 +341,6 @@ export function UserDialogTabsSection({
     };
     const bioSection: UserDialogBioSectionProps = {
         profile,
-        bioLinks,
         onEditBio: isCurrentUser ? onEditSelfProfileDetails : undefined
     };
     const profileLinksSection: UserDialogProfileLinksSectionProps = {

@@ -85,6 +85,12 @@ const visibleWorldFeatureTags: Array<
     ]
 ];
 
+export function contentTagLabel(tag: string, t: TFunction) {
+    const localeKey = `dialog.world.tags.${tag}`;
+    const localized = t(localeKey);
+    return localized === localeKey ? tag.replace(/^content_/, '') : localized;
+}
+
 export function visibleWorldTags(world: WorldProfileRecord, t: TFunction) {
     const tags = world.tags;
     const warnings: Array<{ key: string; label: string }> = [];
@@ -117,32 +123,29 @@ export function visibleWorldTags(world: WorldProfileRecord, t: TFunction) {
         );
     }
 
+    const attributes: Array<{ key: string; label: string }> = [];
     if (tags.includes('debug_allowed')) {
-        pushRestriction('debug_allowed', 'Debug allowed');
+        attributes.push({
+            key: 'debug_allowed',
+            label: t('dialog.world.tags.debug_allowed')
+        });
     }
     const unityPackage = isRecord(world.unityPackage)
         ? world.unityPackage
         : null;
     if (world.unityPackageUrl || unityPackage?.url) {
-        pushRestriction(
-            'future_proofing',
-            t('dialog.world.tags.future_proofing')
-        );
+        attributes.push({
+            key: 'future_proofing',
+            label: t('dialog.world.tags.future_proofing')
+        });
     }
     for (const tag of tags) {
         if (String(tag).startsWith('content_')) {
-            const localeKey = `dialog.world.tags.${tag}`;
-            const localized = t(localeKey);
-            pushWarning(
-                tag,
-                localized === localeKey
-                    ? String(tag).replace(/^content_/, '')
-                    : localized
-            );
+            pushWarning(tag, contentTagLabel(String(tag), t));
         }
     }
 
-    return { warnings, restrictions };
+    return { warnings, restrictions, attributes };
 }
 
 const FRIEND_VISIT_NAME_PREVIEW_LIMIT = 3;

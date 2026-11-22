@@ -15,7 +15,8 @@ preview so it looks good when pasted; the plain VRChat link is always available 
 
 - The user's name, status (Online, Join Me, Ask Me, Do Not Disturb, online on another
   platform or the website, Offline), status text, pronouns, trust level and
-  [badges](BADGES.md).
+  [badges](BADGES.md). The side rail beside the tabs lists their bio links, each with a copy
+  button.
 - **Current location** with the world's thumbnail, the instance, its creator, whether it is
   age-restricted or closed, and who else is there. From here you can join (Launch/Invite) or
   invite yourself; the instance actions are labeled buttons such as **Join**.
@@ -80,12 +81,19 @@ The developer's own user dialog always uses a black, white and red color scheme.
 
 ### What it shows
 
-- **Info**: name, description (with **Translate Description**), your local note, author tags,
-  YouTube preview, players now (split into public and private), favorites, visits, capacity,
-  heat and popularity, when it was
-  created, updated and published (and published to Labs), version, release status, platforms
-  and restrictions, plus **your last visit**, **your visits**, **your time spent**, friends who
-  visited and when they last did, the world's persistent data and its cache size on your PC.
+- The side rail shows the world's players online now, favorites, visits, capacity and when
+  you last visited, its rating score, and its ID and links with copy buttons. Badges under
+  the name show its release status and its restrictions in plain words (emoji, stickers,
+  pedestals, prints, drones or items disabled, third-person view disabled, debugging
+  allowed).
+- **Info**: name, description (with **Translate Description**), then sections: **You and
+  This World** (your local note, **your last visit**, **your visits**, **your time spent**,
+  friends who visited and when they last did), **Audience** (players now, split into public
+  and private, favorites and favorite rate, visits, capacity, heat and popularity),
+  **Release** (when it was created, updated and published, and published to Labs, release
+  status), **Technical** (version, platforms, allowed video player domains, persistent data
+  and its cache size on your PC, YouTube preview) and **Tags & Restrictions** (author tags,
+  restrictions and other attributes).
 - **Instances**: the world's open instances with their players and friends in them. Each row
   leads with the room name when the instance has one, followed by its location, category and
   vibes, its description, and its languages on the right, keeping the languages the host set
@@ -120,9 +128,12 @@ The developer's own user dialog always uses a black, white and red color scheme.
 
 ### What it shows
 
-- **Info**: name, description, ID and links, when it was created and updated, version,
-  platforms, its performance rating on PC, Android and iOS, how long you have worn it,
-  visibility, tags, your local note, store listings, its gallery and attributes.
+- The side rail shows its ID and links with copy buttons and a row per platform (PC,
+  Android, iOS) with its performance rating and download size. Badges under the name show
+  what matters about it, such as being on the Marketplace.
+- **Info**: name and description, then sections: **You and This Avatar** (your local note,
+  how long you have worn it), **Details** (when it was created and updated, version,
+  visibility, store listings, its gallery and attributes), **Performance** and **Tags**.
 - **Performance**: the full performance stats against each platform's limits.
 - **JSON**.
 
@@ -139,8 +150,13 @@ The developer's own user dialog always uses a black, white and red color scheme.
 
 ### What it shows
 
-- **Overview**: announcement, rules, member count, creation date, links, roles (and yours),
-  your last visit, open instances, and past and upcoming events.
+- The header names the owner. The side rail shows its member count, join state, privacy,
+  your membership, URL and ID.
+- **Overview** shows only what the group has: a link to its open instances, the
+  announcement, rules, recent and upcoming events, and basics (creation date, your last
+  visit, roles and tags).
+- **Instances**: the group's open instances, with their count on the tab and a **Hide
+  closed or full** toggle.
 - **Events**, **Posts** and **Photos**.
 - **JSON**.
 

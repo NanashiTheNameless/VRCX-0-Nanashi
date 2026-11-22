@@ -37,6 +37,7 @@ import {
     EntityFactList,
     EntityFactRow,
     EntityFactValue,
+    EntityLinkFactRow,
     EntityOverviewCard
 } from '../../EntityDialogScaffold';
 import type {
@@ -189,6 +190,7 @@ export interface UserHeaderModel {
     actionStatus: string;
     appearanceVisibility: UserDialogProfileAppearanceVisibility;
     avatarOverrideState: AvatarOverrideState;
+    bioLinks: string[];
     bannerColor: string;
     bannerFallbackUrl: string;
     canInviteFromCurrentLocation: boolean;
@@ -229,6 +231,8 @@ export interface UserHeaderCommands {
     onCopyUserId: () => void;
     onCopyUsername?: () => void;
     onCopyUserUrl: () => void;
+    onCopyLink: (url: string) => void;
+    onOpenLink: (url: string) => void;
     onEditMemo: () => void;
     onEditSelfProfile: () => void;
     onEditSelfStatus: () => void;
@@ -370,13 +374,20 @@ function UserDialogHeaderFacts({
 }: {
     factsModel: Pick<
         UserHeaderModel,
-        'actionStatus' | 'isCurrentUser' | 'profile' | 'username' | 'userUrl'
+        | 'actionStatus'
+        | 'bioLinks'
+        | 'isCurrentUser'
+        | 'profile'
+        | 'username'
+        | 'userUrl'
     >;
     factsCommands: Pick<
         UserHeaderCommands,
         | 'onCopyUserId'
         | 'onCopyUsername'
         | 'onCopyUserUrl'
+        | 'onCopyLink'
+        | 'onOpenLink'
         | 'onOpenDiscordProfile'
         | 'onOpenUserUrl'
         | 'onToggleSelfAvatarCopying'
@@ -388,6 +399,7 @@ function UserDialogHeaderFacts({
     const { i18n, t } = useTranslation();
     const {
         actionStatus = 'idle',
+        bioLinks,
         isCurrentUser,
         profile = {},
         username,
@@ -407,6 +419,8 @@ function UserDialogHeaderFacts({
         onCopyUserId,
         onCopyUsername,
         onCopyUserUrl,
+        onCopyLink,
+        onOpenLink,
         onOpenDiscordProfile,
         onOpenUserUrl,
         onToggleSelfAvatarCopying,
@@ -514,6 +528,14 @@ function UserDialogHeaderFacts({
                     </EntityFactValue>
                 </EntityFactRow>
             ) : null}
+            {bioLinks.map((link) => (
+                <EntityLinkFactRow
+                    key={link}
+                    link={link}
+                    onOpen={onOpenLink}
+                    onCopy={onCopyLink}
+                />
+            ))}
         </EntityFactList>
     );
 }
@@ -532,6 +554,7 @@ export function UserDialogHeaderSection({
         actionStatus = 'idle',
         appearanceVisibility,
         avatarOverrideState,
+        bioLinks,
         bannerColor,
         bannerFallbackUrl,
         canInviteFromCurrentLocation,
@@ -571,6 +594,8 @@ export function UserDialogHeaderSection({
         onCopyUserId,
         onCopyUsername,
         onCopyUserUrl,
+        onCopyLink,
+        onOpenLink,
         onEditMemo,
         onEditSelfProfile,
         onEditSelfStatus,
@@ -644,6 +669,7 @@ export function UserDialogHeaderSection({
     };
     const factsModel = {
         actionStatus,
+        bioLinks,
         isCurrentUser,
         profile,
         username,
@@ -653,6 +679,8 @@ export function UserDialogHeaderSection({
         onCopyUserId,
         onCopyUsername,
         onCopyUserUrl,
+        onCopyLink,
+        onOpenLink,
         onOpenDiscordProfile,
         onOpenUserUrl,
         onToggleSelfAvatarCopying,

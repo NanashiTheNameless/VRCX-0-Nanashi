@@ -1,4 +1,9 @@
-import { ChevronRightIcon, CopyIcon, MoreHorizontalIcon } from 'lucide-react';
+import {
+    ChevronRightIcon,
+    CopyIcon,
+    MoreHorizontalIcon,
+    ExternalLinkIcon
+} from 'lucide-react';
 import {
     type ComponentProps,
     type ComponentType,
@@ -12,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { collapseAllNested, JsonView } from 'react-json-view-lite';
 
+import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/services/clipboardService';
@@ -267,23 +273,21 @@ function EntityMemoTextarea({
     }
 
     return (
-        <div className="box-border flex w-full cursor-default items-center p-1.5 text-sm">
-            <div className="min-w-0 flex-1">
-                <span className="text-muted-foreground block truncate text-xs leading-5 font-medium">
-                    {label}
-                </span>
-                <Textarea
-                    value={draft}
-                    rows={2}
-                    placeholder={placeholder}
-                    disabled={saving}
-                    className="mt-1 min-h-0 resize-none text-xs"
-                    onChange={(event) => setDraft(event.target.value)}
-                    onBlur={() => {
-                        saveDraft();
-                    }}
-                />
-            </div>
+        <div className="col-span-full flex w-full min-w-0 flex-col gap-0.5 py-1.5 text-sm">
+            <span className="text-muted-foreground block truncate text-xs leading-snug">
+                {label}
+            </span>
+            <Textarea
+                value={draft}
+                rows={1}
+                placeholder={placeholder}
+                disabled={saving}
+                className="-mx-2 min-h-0 w-[calc(100%+1rem)] resize-none border-transparent bg-transparent px-2 py-1 text-sm shadow-none hover:bg-(--state-hover-surface) focus-visible:bg-transparent md:text-sm dark:bg-transparent"
+                onChange={(event) => setDraft(event.target.value)}
+                onBlur={() => {
+                    saveDraft();
+                }}
+            />
         </div>
     );
 }
@@ -554,10 +558,93 @@ function EntityFactAction({
     );
 }
 
+function linkHost(link: string) {
+    try {
+        return new URL(link).host.replace(/^www\./, '');
+    } catch {
+        return link;
+    }
+}
+
+function linkPath(link: string) {
+    try {
+        const url = new URL(link);
+        const path = `${url.pathname}${url.search}`.replace(/^\/$/, '');
+        return path.length > 18 ? `${path.slice(0, 14)}\u2026` : path;
+    } catch {
+        return '';
+    }
+}
+
+function EntityLinkFactRow({
+    link,
+    onOpen,
+    onCopy
+}: {
+    link: string;
+    onOpen: (link: string) => void;
+    onCopy: (link: string) => void;
+}) {
+    const { t } = useTranslation();
+    return (
+        <EntityFactRow
+            label={
+                <span className="flex min-w-0 items-center gap-1.5">
+                    <BioLinkFavicon
+                        link={link}
+                        className="size-3.5"
+                        fallback={<ExternalLinkIcon className="size-3.5" />}
+                    />
+                    <span className="truncate">{linkHost(link)}</span>
+                </span>
+            }
+        >
+            <EntityFactValue display={linkPath(link)} title={link}>
+                <EntityFactAction
+                    label={t('common.actions.open_link')}
+                    icon={ExternalLinkIcon}
+                    onClick={() => onOpen(link)}
+                />
+                <EntityFactAction
+                    label={t('common.actions.copy')}
+                    icon={CopyIcon}
+                    onClick={() => onCopy(link)}
+                />
+            </EntityFactValue>
+        </EntityFactRow>
+    );
+}
+
+function EntityInfoSections({ children, className }: ClassNameAndChildren) {
+    return (
+        <div className={cn('flex min-w-0 flex-col gap-6', className)}>
+            {children}
+        </div>
+    );
+}
+
+function EntityInfoSection({
+    title,
+    children,
+    className
+}: ClassNameAndChildren & { title: ReactNode }) {
+    return (
+        <section className={cn('flex min-w-0 flex-col gap-2.5', className)}>
+            <h3 className="text-foreground px-2 text-sm font-semibold">
+                {title}
+            </h3>
+            <EntityInfoGrid>{children}</EntityInfoGrid>
+        </section>
+    );
+}
+
 function EntityInfoGrid({ children, className }: ClassNameAndChildren) {
     return (
         <div
-            className={cn('flex flex-wrap items-start gap-1 px-2.5', className)}
+            className={cn(
+                'grid min-w-0 grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] items-start gap-x-6 gap-y-1 px-2',
+                className
+            )}
         >
             {children}
         </div>
@@ -567,6 +654,7 @@ function EntityInfoGrid({ children, className }: ClassNameAndChildren) {
 function EntityInfoBlock({
     label,
     value,
+    hint,
     mono = false,
     full = false,
     wide = false,
@@ -575,6 +663,7 @@ function EntityInfoBlock({
 }: {
     label: ReactNode;
     value?: ReactNode;
+    hint?: ReactNode;
     mono?: boolean;
     full?: boolean;
     wide?: boolean;
@@ -587,8 +676,8 @@ function EntityInfoBlock({
             type={onClick ? 'button' : undefined}
             onClick={onClick}
             className={cn(
-                'group/info-item flex items-start rounded-lg px-2 py-1.5 text-left text-sm transition-colors outline-none [&>svg:not([class*=size-])]:size-3.5',
-                full ? 'w-full' : wide ? 'w-80' : 'w-44',
+                'group/info-item -mx-2 flex min-w-0 items-start rounded-lg px-2 py-1.5 text-left text-sm transition-colors outline-none [&>svg:not([class*=size-])]:size-3.5',
+                full ? 'col-span-full' : wide ? 'col-span-2' : '',
                 onClick
                     ? 'focus-visible:border-ring focus-visible:ring-ring/50 cursor-pointer hover:bg-(--state-hover-surface) focus-visible:ring-3 active:bg-(--state-pressed-surface)'
                     : 'cursor-default'
@@ -599,13 +688,21 @@ function EntityInfoBlock({
                     {label}
                 </span>
                 {children || (
-                    <span
-                        className={cn(
-                            'block truncate text-sm leading-snug font-medium',
-                            mono ? 'font-mono text-xs font-normal' : ''
-                        )}
-                    >
-                        {value || '-'}
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                        <span
+                            className={cn(
+                                'text-sm leading-snug font-medium',
+                                hint ? 'shrink-0' : 'min-w-0 truncate',
+                                mono ? 'font-mono text-xs font-normal' : ''
+                            )}
+                        >
+                            {value || '-'}
+                        </span>
+                        {hint ? (
+                            <span className="text-muted-foreground min-w-0 truncate text-xs">
+                                {hint}
+                            </span>
+                        ) : null}
                     </span>
                 )}
             </div>
@@ -632,9 +729,12 @@ export {
     EntityFactAction,
     EntityFactList,
     EntityFactRow,
+    EntityLinkFactRow,
     EntityFactValue,
     EntityInfoBlock,
     EntityInfoGrid,
+    EntityInfoSection,
+    EntityInfoSections,
     EntityMemoTextarea,
     EntityOverviewCard,
     EntityRawJson

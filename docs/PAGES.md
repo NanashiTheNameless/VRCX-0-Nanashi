@@ -232,7 +232,8 @@ mark as read or delete. Friend requests offer **Ignore** instead of decline, whi
 request to Ignored Friend Requests on VRChat. Each action's tooltip, or the small line under it
 in a menu, says whether it **Runs on VRChat** or **Only changes VRCX-0-Nanashi's local data**.
 Mark as read (and mark all read) marks the notification read in the app first, then on VRChat;
-older invites and invite requests are marked expired instead. If VRChat cannot be reached the
+older invites and invite requests are marked expired instead. Mark all read also dismisses
+recent notifications you have already seen that can be dismissed. If VRChat cannot be reached the
 notification stays read in the app and a warning says it could not sync to VRChat.
 Settings > Notifications > In-App Indicators > Notification View switches this page to a table
 layout.

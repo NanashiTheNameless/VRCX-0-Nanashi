@@ -6259,7 +6259,6 @@
             },
             "groups": {
                 "header": "Groups",
-                "sort_by": "Sort by:",
                 "own_groups": "Owned Groups",
                 "mutual_groups": "Mutual Groups",
                 "groups": "Groups",
@@ -6272,7 +6271,7 @@
             },
             "worlds": {
                 "header": "Worlds",
-                "sort_by": "Sort by:",
+                "current_occupants": "Players in world now",
                 "sorting": {
                     "name": "Name",
                     "updated": "Updated",
@@ -6290,7 +6289,6 @@
             },
             "avatars": {
                 "header": "Avatars",
-                "sort_by": "Sort by:",
                 "sort_by_name": "Name",
                 "sort_by_update": "Updated",
                 "sort_by_uploaded": "Uploaded",
@@ -6408,8 +6406,6 @@
                 "visibility_hidden": "Hidden",
                 "moderator": "VRChat Team",
                 "muted": "Muted",
-                "order_by": "Order By",
-                "group_by": "Group By",
                 "trust_level": "Trust level",
                 "age_verified": "Age verified",
                 "platform": "Last used platform",
@@ -6623,14 +6619,20 @@
                 "future_proofing": "Future Proofing",
                 "labs": "Labs",
                 "cache": "Cache",
-                "restrictions_count_one": "{count} restriction",
-                "restrictions_count_other": "{count} restrictions",
                 "content_horror": "Horror",
                 "content_gore": "Gore",
                 "content_violence": "Violence",
                 "content_adult": "Adult",
                 "content_sex": "Sexual",
-                "pedestals": "Pedestals"
+                "pedestals": "Pedestals",
+                "emoji_disabled": "Emoji disabled",
+                "stickers_disabled": "Stickers disabled",
+                "pedestals_disabled": "Pedestals disabled",
+                "prints_disabled": "Prints disabled",
+                "drones_disabled": "Drones disabled",
+                "props_disabled": "Items disabled",
+                "third_person_view_disabled": "Third-person view disabled",
+                "debug_allowed": "Debugging allowed"
             },
             "actions": {
                 "delete_cache_tooltip": "Delete world from cache",
@@ -6714,7 +6716,18 @@
                 "friends_visited": "Friends Who Visited",
                 "friends_last_visited": "Friends' Last Visit",
                 "persistent_data": "Persistent Data",
-                "cache_size": "Cache Size"
+                "cache_size": "Cache Size",
+                "sections": {
+                    "personal": "You and This World",
+                    "stats": "Audience",
+                    "release": "Release",
+                    "technical": "Technical",
+                    "tags": "Tags & Restrictions"
+                },
+                "favorite_rate": "{rate}% favorite rate",
+                "capacity_value": "Recommended {recommended} · Max {max}",
+                "video_domains_count": "{count} allowed domains",
+                "attributes": "Other attributes"
             },
             "json": {
                 "header": "JSON"
@@ -6859,6 +6872,13 @@
                 "failed_to_update_value": "Failed to update {value}",
                 "value_copied": "{value} copied",
                 "set_value_as_your_vrchat_home_world": "Set {value} as your VRChat home world?"
+            },
+            "rail": {
+                "online": "Online",
+                "favorites": "Favorites",
+                "visits": "Visits",
+                "capacity": "Capacity",
+                "last_visited": "Last visited"
             }
         },
         "avatar": {
@@ -6868,7 +6888,8 @@
                 "fallback": "Fallback",
                 "impostor": "Impostor",
                 "future_proofing": "Future Proofing",
-                "cache": "Cache"
+                "cache": "Cache",
+                "marketplace": "Marketplace"
             },
             "actions": {
                 "delete_cache_tooltip": "Delete avatar from cache",
@@ -6918,7 +6939,13 @@
                 "gallery_move_earlier": "Move earlier",
                 "gallery_move_later": "Move later",
                 "gallery_delete_image": "Delete image",
-                "attributes": "Attributes"
+                "attributes": "Attributes",
+                "sections": {
+                    "personal": "You and This Avatar",
+                    "details": "Details",
+                    "performance": "Performance",
+                    "tags": "Tags"
+                }
             },
             "performance": {
                 "header": "Performance",
@@ -7115,7 +7142,8 @@
                 "no_active_instances": "No active instances",
                 "no_active_instances_description": "No public or group instances are currently listed for this group.",
                 "no_recent_events": "No recent group events",
-                "preview_banner": "Preview {value} banner"
+                "preview_banner": "Preview {value} banner",
+                "open_instances": "{count} instances open now"
             },
             "events": {
                 "header": "Events",
@@ -7309,6 +7337,26 @@
                 "join_state_invite": "Invite Only",
                 "join_state_closed": "Closed",
                 "allow_join_prompt": "Prompt people in group instances to join"
+            },
+            "values": {
+                "privacy": {
+                    "default": "Public",
+                    "private": "Private"
+                },
+                "join_state": {
+                    "open": "Open",
+                    "request": "Request to join",
+                    "invite": "Invite only",
+                    "closed": "Closed"
+                },
+                "membership": {
+                    "member": "Member",
+                    "inactive": "Not a member",
+                    "requested": "Requested",
+                    "invited": "Invited",
+                    "banned": "Banned",
+                    "userblocked": "Blocked"
+                }
             }
         },
         "favorite": {
