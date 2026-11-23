@@ -37,7 +37,9 @@ preview so it looks good when pasted; the plain VRChat link is always available 
 - **Avatars** they uploaded that are public (all of yours, including purchased, on your own
   profile).
 - **Mutual Friends**, sortable by last active or your friend order. Friends who hide the
-  connection show as undisclosed.
+  connection show as undisclosed. Switch from **Friends** to **Mutual Friend Graph** to see how
+  those friends know each other, with each friend's profile picture on their dot and the
+  person you are viewing highlighted.
 - **Activity**: a calendar of when they were online (the "green squares", which you can't
   farm), their most active day and peak hours, your **online overlap** with them, and their
   most visited worlds (by time or visits, optionally without their home world). Pick 7, 30, 90, 180 or 365 days, or all time.

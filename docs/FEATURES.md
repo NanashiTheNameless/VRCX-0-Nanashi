@@ -374,6 +374,8 @@ Under Settings > Notifications, choose a built-in sound or an audio file and vol
 for anyone, friends, or favorite friends.
 
 - Sounds work in background mode and respect Do Not Disturb and privacy lock.
+- **Test sound** plays your own file only after you pick it with **Browse** since the app started (or
+  when it is inside the app or VRChat data folders); notifications themselves play it as usual.
 - Built-in sounds are CC0 clips listed in
   [crates/host-desktop/sounds](../crates/host-desktop/sounds/README.md).
 

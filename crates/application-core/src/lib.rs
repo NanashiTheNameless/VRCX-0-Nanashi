@@ -50,9 +50,10 @@ pub use background::{
 pub use config::{config_string_array_value, normalize_config_string_array};
 #[cfg(any(test, feature = "test-utils"))]
 pub use contract_test_support::{
-    assert_json_contract, CallRecorder, MemoryConfigStore, MemoryCookieWebClientPort,
-    MemoryFileCachePort, MemoryWorldCachePort, NoopAvatarCachePort, NoopImageCachePort,
-    NoopWebClientPort, NoopWorldCachePort, ScriptedResults,
+    assert_json_contract, CallRecorder, CountingTaskExecutor, DiscardTaskExecutor,
+    MemoryConfigStore, MemoryCookieWebClientPort, MemoryFileCachePort, MemoryWorldCachePort,
+    NoopAvatarCachePort, NoopImageCachePort, NoopWebClientPort, NoopWorldCachePort,
+    ScriptedResults,
 };
 pub use diagnostics::RuntimeDiagnostics;
 pub use error::Error;
@@ -92,8 +93,8 @@ pub use runtime_output::{
 pub use runtime_status::RuntimeOperationStatus;
 pub use sync::{RuntimeSyncEngine, RuntimeSyncSnapshot};
 pub use task_supervisor::{
-    RuntimeTask, RuntimeTaskExecutor, RuntimeTaskHandle, TaskSpawnOutcome, TaskStopReport,
-    TaskStopToken, TaskSupervisor,
+    RuntimeTask, RuntimeTaskExecutor, RuntimeTaskHandle, TaskJoinFuture, TaskSpawnOutcome,
+    TaskStopReport, TaskStopToken, TaskSupervisor, TokioTaskHandle,
 };
 pub use vrcx_0_contracts::RuntimeEventPayload;
 pub use vrcx_0_core::{FavoriteChangeScope, FavoriteEntityKind, FavoriteGroupVisibility};

@@ -67,6 +67,8 @@ What happened in the instances you were in, read from VRChat's own log while the
 - **Sessions view** groups entries by visit: the world, when you were there, which friends and
   how many players were there, and which videos played and who played them. When a session's
   video list is too long to fit, **Show all** expands it and **Show less** shrinks it back.
+  A video with a link opens it when clicked. Popcorn Palace plays carry the link VRChat loaded
+  for them, so they can be opened too.
   Expand a session for every event. A session marked **Other device** was recorded from your online status
   while VRChat was not running on this PC, so it has no player or video details.
   Event details load as sessions approach the visible area while you scroll.
@@ -272,6 +274,8 @@ How your friends know each other. **Start Fetch** downloads mutual friends in th
 - Friends are colored by **community** (circles of friends who know each other); small
   communities are gray. Bright lines connect different communities, and you can mute the lines
   inside them.
+- Hover a friend to see their profile picture, and those of the friends they are connected to,
+  on the dots.
 - Find a friend, filter by a minimum number of connections, hide friends from the graph, and tune
   the layout (iterations, spacing, curvature, community separation).
 

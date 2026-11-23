@@ -26,8 +26,16 @@ import {
     drawMutualFriendHoverCard,
     type HoverCardStrings
 } from './mutualFriendsSigmaHoverCard';
+import {
+    createNodeImageLoader,
+    drawMutualFriendNodeImage
+} from './mutualFriendsSigmaNodeImages';
 
 const NODE_LABEL_THRESHOLD = 10;
+const DEFAULT_MIN_NODE_SIZE = 4;
+const NODE_RING_SIZE = 0.1;
+const HOVER_IMAGE_NODE_SIZE = 12;
+const MAX_NODE_SIZE = 22;
 const UNASSIGNED_COMMUNITY = -1;
 const LABEL_DENSITY = 0.7;
 const LABEL_GRID_CELL_SIZE = 140;
@@ -51,6 +59,7 @@ type MutualFriendsNodeAttributes = Record<string, unknown> & {
     community: number;
     communityNamed: boolean;
     degree: number;
+    emphasized: boolean;
     forceLabel?: boolean;
     fullLabel: string;
     holeColor?: string;
@@ -308,7 +317,9 @@ export async function buildSigmaGraph({
     communityIndexById,
     namedCommunityIndexes,
     theme,
-    forceLabels = false
+    forceLabels = false,
+    minNodeSize = DEFAULT_MIN_NODE_SIZE,
+    emphasizedNodeId = ''
 }: {
     graph: MutualFriendGraph;
     layoutSettings: MutualFriendsLayoutSettings;
@@ -316,6 +327,8 @@ export async function buildSigmaGraph({
     namedCommunityIndexes: ReadonlySet<number>;
     theme: MutualFriendsGraphTheme;
     forceLabels?: boolean;
+    minNodeSize?: number;
+    emphasizedNodeId?: string;
 }) {
     const graph = new Graph<
         MutualFriendsNodeAttributes,
@@ -331,7 +344,11 @@ export async function buildSigmaGraph({
     );
 
     for (const node of sourceGraph.nodes) {
-        const baseSize = 4 + (maxDegree ? (node.degree / maxDegree) * 18 : 0);
+        const baseSize =
+            minNodeSize +
+            (maxDegree
+                ? (node.degree / maxDegree) * (MAX_NODE_SIZE - minNodeSize)
+                : 0);
         const community =
             communityIndexById.get(node.id) ?? UNASSIGNED_COMMUNITY;
         graph.addNode(node.id, {
@@ -340,6 +357,7 @@ export async function buildSigmaGraph({
             size: baseSize,
             baseSize,
             degree: node.degree,
+            emphasized: node.id === emphasizedNodeId,
             mutualCount: node.mutualCount,
             optedOut: node.optedOut,
             lastFetchedAt: node.lastFetchedAt,
@@ -432,7 +450,9 @@ export function renderSigmaGraph({
     crossCommunityOnlyRef,
     onSelectNode,
     onOpenNode,
-    hoverCardStringsRef
+    hoverCardStringsRef,
+    nodeImageUrlByIdRef,
+    nodeImagesOnHover = false
 }: {
     graph: MutualFriendsSigmaGraph;
     container: HTMLElement;
@@ -444,6 +464,8 @@ export function renderSigmaGraph({
     onSelectNode: (nodeId: string) => void;
     onOpenNode?: (nodeId: string) => void;
     hoverCardStringsRef: { current: HoverCardStrings };
+    nodeImageUrlByIdRef?: { current: ReadonlyMap<string, string> };
+    nodeImagesOnHover?: boolean;
 }) {
     destroySigmaInstance(instanceRef, resizeObserverRef);
     const reducedMotion = prefersReducedMotion();
@@ -454,6 +476,7 @@ export function renderSigmaGraph({
     let neighbors = new Set<string>();
 
     const repaint = () => renderer.refresh({ skipIndexation: true });
+    const imageLoader = createNodeImageLoader(repaint);
 
     const reduceNode = (
         node: string,
@@ -472,7 +495,9 @@ export function renderSigmaGraph({
 
         const result = {
             ...data,
-            labelColor: theme.labelColor,
+            labelColor: attributes.emphasized
+                ? theme.emphasisLabelColor
+                : theme.labelColor,
             labelFont: 'Arial',
             labelSize: 14,
             backdropVisibility: 'hidden' as const,
@@ -516,6 +541,17 @@ export function renderSigmaGraph({
             if (dim > 0.5) {
                 result.label = '';
             }
+        }
+        if (
+            nodeImagesOnHover &&
+            (isHovered || isNeighbor) &&
+            attributes.type !== 'hollow' &&
+            nodeImageUrlByIdRef?.current.has(node)
+        ) {
+            result.size = Math.max(
+                result.size,
+                baseSize + (HOVER_IMAGE_NODE_SIZE - baseSize) * dim
+            );
         }
         result.borderColor =
             attributes.type === 'hollow' ? result.color : result.ringColor;
@@ -589,7 +625,7 @@ export function renderSigmaGraph({
                     layerBorder({
                         borders: [
                             {
-                                size: 0.1,
+                                size: NODE_RING_SIZE,
                                 color: {
                                     attribute: 'borderColor',
                                     default: NODE_RING_COLOR
@@ -643,14 +679,62 @@ export function renderSigmaGraph({
     const hoverCanvas = renderer.createCanvas('mutual-friend-hover', {
         afterLayer: 'stage',
         style: {
-            pointerEvents: 'none',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%'
+            pointerEvents: 'none'
         }
     });
-    const drawHoverCard = () => {
+    const drawNodeImages = (
+        ctx: CanvasRenderingContext2D,
+        width: number,
+        height: number
+    ) => {
+        const urls = nodeImageUrlByIdRef?.current;
+        if (!urls?.size) {
+            return;
+        }
+        const dim = hoverTransition.value;
+        const hoverNodes = hovered && dim > 0 ? [hovered, ...neighbors] : [];
+        for (const node of nodeImagesOnHover ? hoverNodes : graph.nodes()) {
+            const url = urls.get(node);
+            if (
+                !url ||
+                !graph.hasNode(node) ||
+                graph.getNodeAttribute(node, 'type') === 'hollow'
+            ) {
+                continue;
+            }
+            const data = renderer.getNodeDisplayData(node);
+            if (!data) {
+                continue;
+            }
+            const { x, y } = renderer.framedGraphToViewport(data);
+            const size = renderer.scaleSize(data.size);
+            if (
+                x + size < 0 ||
+                y + size < 0 ||
+                x - size > width ||
+                y - size > height
+            ) {
+                continue;
+            }
+            const image = imageLoader.get(url);
+            if (!image) {
+                continue;
+            }
+            const stayLit =
+                node === hovered ||
+                neighbors.has(node) ||
+                node === selectedNodeIdRef.current;
+            const restingAlpha = stayLit ? 1 : 1 - dim * NODE_DIM_STRENGTH;
+            drawMutualFriendNodeImage(
+                ctx,
+                image,
+                { x, y, radius: size * (1 - NODE_RING_SIZE) },
+                nodeImagesOnHover ? dim : restingAlpha,
+                themeRef.current.backgroundColor
+            );
+        }
+    };
+    const drawOverlay = () => {
         const { width, height } = renderer.getDimensions();
         const pixelRatio = window.devicePixelRatio || 1;
         const pixelWidth = Math.round(width * pixelRatio);
@@ -662,12 +746,15 @@ export function renderSigmaGraph({
             hoverCanvas.width = pixelWidth;
             hoverCanvas.height = pixelHeight;
         }
+        hoverCanvas.style.width = `${width}px`;
+        hoverCanvas.style.height = `${height}px`;
         const ctx = hoverCanvas.getContext('2d');
         if (!ctx) {
             return;
         }
         ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         ctx.clearRect(0, 0, width, height);
+        drawNodeImages(ctx, width, height);
         if (!isPointerOverNode || !hovered || !graph.hasNode(hovered)) {
             return;
         }
@@ -690,7 +777,7 @@ export function renderSigmaGraph({
     };
 
     renderer.removeAllListeners();
-    renderer.on('afterRender', drawHoverCard);
+    renderer.on('afterRender', drawOverlay);
     renderer.on('enterNode', ({ node }) => {
         container.style.cursor = 'pointer';
         isPointerOverNode = true;
@@ -757,11 +844,13 @@ export function renderSigmaGraph({
         applyEdgeEmphasis() {
             repaint();
         },
+        applyNodeImages: repaint,
         dispose() {
             container.style.cursor = '';
+            imageLoader.dispose();
             cancelTransition(hoverTransition);
             cancelTransition(selectionTransition);
-            renderer.removeListener('afterRender', drawHoverCard);
+            renderer.removeListener('afterRender', drawOverlay);
             renderer.killLayer('mutual-friend-hover');
         }
     };

@@ -14,7 +14,10 @@ import { Location } from '@/components/Location';
 import { UserBadges } from '@/components/UserBadges';
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { LoadStatus } from '@/domain/shared/types';
-import { describeGameLogDetail } from '@/features/game-log/gameLogRows';
+import {
+    describeGameLogDetail,
+    getGameLogExternalTarget
+} from '@/features/game-log/gameLogRows';
 import { GAME_LOG_LIVE_REFRESH_THROTTLE_MS } from '@/features/game-log/gameLogTypes';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useThrottledValue } from '@/lib/useThrottledValue';
@@ -209,11 +212,7 @@ function GameLogEntryContent({
             );
         case 'VideoPlay': {
             const videoLabel = row?.videoName || row?.videoUrl || '';
-            const canOpenVideo = Boolean(
-                row?.videoUrl &&
-                row?.videoId !== 'LSMedia' &&
-                row?.videoId !== 'PopcornPalace'
-            );
+            const canOpenVideo = Boolean(getGameLogExternalTarget(row));
             return (
                 <Tooltip>
                     <TooltipTrigger

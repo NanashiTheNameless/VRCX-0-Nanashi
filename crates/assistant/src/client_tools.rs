@@ -192,7 +192,7 @@ for the import or agreed to it. Returns how many worlds and values were added."
             parameters: json!({
                 "type": "object",
                 "properties": {
-                    "path": { "type": "string", "description": "Optional full path to a world data file." },
+                    "path": { "type": "string", "description": "Optional full path to a world data file. Only files the user picked in a file dialog this session, or inside the app or VRChat data folders, can be read." },
                     "reason": {
                         "type": "string",
                         "description": "One plain sentence for the user on what this does for them."
@@ -214,7 +214,7 @@ the user's Approve or Decline. Only use it when the user asked for the merge or 
                 "type": "object",
                 "properties": {
                     "source": { "type": "string", "enum": ["vrcx", "vrcx0", "file"] },
-                    "path": { "type": "string", "description": "Full path, only for source \"file\"." },
+                    "path": { "type": "string", "description": "Full path, only for source \"file\". Only files the user picked in a file dialog this session, or inside the app or VRChat data folders, can be read." },
                     "reason": {
                         "type": "string",
                         "description": "One plain sentence for the user on what this does for them."

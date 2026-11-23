@@ -173,12 +173,12 @@ function InfoPanel({
         <Card
             size="sm"
             className={cn(
-                'ring-stroke-subtle min-w-0 border-0 shadow-none',
+                'bg-card/40 min-w-0 border shadow-none ring-0',
                 className
             )}
         >
             <CardHeader>
-                <CardTitle className="text-muted-foreground min-w-0 truncate text-xs font-medium">
+                <CardTitle className="text-foreground min-w-0 truncate text-sm font-semibold">
                     {title}
                 </CardTitle>
                 {action ? <CardAction>{action}</CardAction> : null}
@@ -198,7 +198,6 @@ function InfoStat({
     children,
     mono = false,
     onClick,
-    subtle = false,
     className
 }: {
     label?: ReactNode;
@@ -206,7 +205,6 @@ function InfoStat({
     children?: ReactNode;
     mono?: boolean;
     onClick?: () => void;
-    subtle?: boolean;
     className?: string;
 }) {
     const body = (
@@ -219,10 +217,7 @@ function InfoStat({
                     <span
                         className={cn(
                             'block truncate text-sm leading-snug font-medium',
-                            mono ? 'font-mono text-xs font-normal' : '',
-                            subtle
-                                ? 'text-muted-foreground text-xs font-normal'
-                                : ''
+                            mono ? 'font-mono text-xs font-normal' : ''
                         )}
                     >
                         {value || '\u2014'}
@@ -285,6 +280,8 @@ function InfoStatGrid({
     );
 }
 
+const DASH = '\u2014';
+
 function formatLocalizedActivityDate(
     value: unknown,
     locale: string | null | undefined,
@@ -298,7 +295,7 @@ function formatLocalizedActivityDate(
         },
         {
             appLocale: locale || undefined,
-            fallback: '\u2014'
+            fallback: DASH
         }
     );
 }
@@ -653,7 +650,6 @@ function UserDialogProfileLinksPanel({
                             ? 'dialog.user.info.avatar_cloning_allow'
                             : 'dialog.user.info.avatar_cloning_deny'
                     )}
-                    subtle
                 />
             )}
             {avatarInfo || !isCurrentUser ? <Separator /> : null}
@@ -814,6 +810,13 @@ function UserRelationshipStat({
     const { i18n, t } = useTranslation();
     const locale = i18n.resolvedLanguage || i18n.language;
     const latest = history[0];
+    const dateText = formatLocalizedActivityDate(
+        latest?.created_at || friendedAt,
+        locale
+    );
+    if (dateText === DASH) {
+        return null;
+    }
     const stat = (
         <InfoStat
             label={t(
@@ -821,11 +824,7 @@ function UserRelationshipStat({
                     ? 'dialog.user.info.unfriended'
                     : 'dialog.user.info.friended'
             )}
-            value={formatLocalizedActivityDate(
-                latest?.created_at || friendedAt,
-                locale
-            )}
-            subtle
+            value={dateText}
             className={latest ? 'mx-0' : undefined}
         />
     );
@@ -911,7 +910,6 @@ function UserCreditsStat({ userId }: { userId: string }) {
                     .getState()
                     .setSystemHostOpen('purchaseHistoryOpen', true);
             }}
-            subtle
         />
     );
 }
@@ -931,6 +929,12 @@ export function UserDialogActivitySummaryPanel({
 }: UserDialogActivitySummarySectionProps) {
     const { i18n, t } = useTranslation();
     const dateLocale = i18n.resolvedLanguage || i18n.language;
+    const lastSeenText = formatLocalizedActivityDate(lastSeen, dateLocale);
+    const lastActivityText = formatLocalizedActivityDate(
+        presenceActivityAt,
+        dateLocale
+    );
+    const timeSpentText = formatStatsDuration(userTimeSpent);
 
     return (
         <InfoPanel
@@ -973,47 +977,42 @@ export function UserDialogActivitySummaryPanel({
             }
         >
             <InfoStatGrid className="sm:grid-cols-1">
-                {!isCurrentUser ? (
+                {!isCurrentUser && lastSeenText !== DASH ? (
                     <InfoStat
                         label={t('dialog.user.info.last_seen')}
-                        value={formatLocalizedActivityDate(
-                            lastSeen,
-                            dateLocale
-                        )}
-                        subtle
+                        value={lastSeenText}
                     />
                 ) : null}
-                <InfoStat
-                    label={t('dialog.user.info.last_activity')}
-                    value={formatLocalizedActivityDate(
-                        presenceActivityAt,
-                        dateLocale
-                    )}
-                    onClick={isFriend ? onOpenFeed : undefined}
-                    subtle
-                />
-                {isCurrentUser ? (
+                {lastActivityText !== DASH ? (
                     <InfoStat
-                        label={t('dialog.user.info.play_time')}
-                        value={formatStatsDuration(userTimeSpent)}
-                        onClick={onOpenInstanceHistory}
-                        subtle
+                        label={t('dialog.user.info.last_activity')}
+                        value={lastActivityText}
+                        onClick={isFriend ? onOpenFeed : undefined}
                     />
+                ) : null}
+                {isCurrentUser ? (
+                    timeSpentText !== DASH ? (
+                        <InfoStat
+                            label={t('dialog.user.info.play_time')}
+                            value={timeSpentText}
+                            onClick={onOpenInstanceHistory}
+                        />
+                    ) : null
                 ) : (
                     <>
-                        <InfoStat
-                            label={t('dialog.user.info.join_count')}
-                            value={
-                                userJoinCount ? String(userJoinCount) : '\u2014'
-                            }
-                            onClick={onOpenInstanceHistory}
-                            subtle
-                        />
-                        <InfoStat
-                            label={t('dialog.user.info.time_together')}
-                            value={formatStatsDuration(userTimeSpent)}
-                            subtle
-                        />
+                        {userJoinCount ? (
+                            <InfoStat
+                                label={t('dialog.user.info.join_count')}
+                                value={String(userJoinCount)}
+                                onClick={onOpenInstanceHistory}
+                            />
+                        ) : null}
+                        {timeSpentText !== DASH ? (
+                            <InfoStat
+                                label={t('dialog.user.info.time_together')}
+                                value={timeSpentText}
+                            />
+                        ) : null}
                         <UserRelationshipStat
                             friendedAt={friendedAt}
                             history={relationshipHistory}

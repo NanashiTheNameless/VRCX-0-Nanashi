@@ -122,6 +122,13 @@ pub async fn app__vrcx_world_data_import(
     state: State<'_, AppState>,
     path: Option<String>,
 ) -> Result<WorldDataImportReport, AppError> {
+    if let Some(path) = path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+    {
+        state.runtime_host().ensure_host_read_allowed(path)?;
+    }
     Ok(state
         .runtime_host()
         .vrcx_compat()

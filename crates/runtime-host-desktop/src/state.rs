@@ -1591,6 +1591,12 @@ impl DesktopRuntimeHostState {
             .ensure_read_allowed(path, self.runtime.paths())
     }
 
+    pub fn ensure_host_write_allowed(&self, path: impl AsRef<std::path::Path>) -> Result<()> {
+        self.desktop
+            .host_file_access
+            .ensure_write_allowed(path, self.runtime.paths())
+    }
+
     pub fn is_known_runtime_root_path(&self, path: impl AsRef<std::path::Path>) -> bool {
         crate::is_known_root_path(path, self.runtime.paths())
     }
@@ -1616,6 +1622,7 @@ impl DesktopRuntimeHostState {
         &self,
         path: std::path::PathBuf,
     ) -> Result<vrcx_0_persistence::profile_merge::ProfileMergeReport> {
+        self.ensure_host_read_allowed(&path)?;
         let database = Arc::clone(self.runtime.database());
         let app_data = self.runtime.paths().app_data.clone();
         tokio::task::spawn_blocking(move || {
@@ -1663,6 +1670,7 @@ impl DesktopRuntimeHostState {
         archive: std::path::PathBuf,
         app_version: String,
     ) -> Result<vrcx_0_outbound_adapters::DataExportReport> {
+        self.ensure_host_write_allowed(&archive)?;
         let database = Arc::clone(self.runtime.database());
         let storage = Arc::clone(self.runtime.storage());
         let app_data = self.runtime.paths().app_data.clone();
@@ -1693,6 +1701,7 @@ impl DesktopRuntimeHostState {
         &self,
         archive: std::path::PathBuf,
     ) -> Result<vrcx_0_outbound_adapters::DataImportSummary> {
+        self.ensure_host_read_allowed(&archive)?;
         let app_data = self.runtime.paths().app_data.clone();
         tokio::task::spawn_blocking(move || {
             vrcx_0_outbound_adapters::stage_data_import(&app_data, &archive)
@@ -2387,9 +2396,21 @@ impl DesktopRuntimeProfileExtension {
     ) {
         #[cfg(target_os = "windows")]
         if is_host_capability_available(HostCapability::GameLogWatcher) {
-            let local_low = std::env::var("LOCALAPPDATA")
-                .map(|path| PathBuf::from(path).join("..\\LocalLow\\VRChat\\VRChat"))
-                .unwrap_or_default();
+            let Some(local_low) = vrcx_0_host_desktop::vrchat_paths::windows_vrchat_app_data()
+            else {
+                state.desktop_assembly().background_jobs().register_job(
+                    "gameLogWatcher",
+                    "rust-host",
+                    None,
+                    RuntimeOperationStatus::Unavailable,
+                    "LOCALAPPDATA is not set, so the VRChat log folder cannot be located.",
+                );
+                emit_game_log_watcher_status(
+                    state,
+                    vrcx_0_application_core::BackendRuntimeGameLogStatus::Unavailable,
+                );
+                return;
+            };
             if let Err(error) = self
                 .game
                 .game_log_runtime

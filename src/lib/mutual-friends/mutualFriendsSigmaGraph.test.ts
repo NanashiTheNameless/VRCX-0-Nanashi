@@ -267,6 +267,55 @@ describe('mutual friends graph lifecycle', () => {
     );
 });
 
+describe('mutual friends graph node images', () => {
+    it('repaints only when avatar urls actually change', async () => {
+        vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(
+            400
+        );
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(
+            300
+        );
+        function GraphView({ urls }: { urls: ReadonlyMap<string, string> }) {
+            const lifecycle = useMutualFriendsSigmaLifecycle({
+                graph: GRAPH,
+                layoutSettings: MUTUAL_GRAPH_LAYOUT_DEFAULTS,
+                communityIndexById: new Map<string, number>(),
+                namedCommunityIndexes: new Set<number>(),
+                resolvedTheme: 'dark',
+                crossCommunityOnly: false,
+                selectedNodeId: '',
+                selectedNodeIdRef: { current: '' },
+                onSelectNode: vi.fn(),
+                nodeImageUrlById: urls
+            });
+            return createElement('div', { ref: lifecycle.setGraphElementRef });
+        }
+        const view = render(
+            createElement(GraphView, {
+                urls: new Map([['usr_a', 'https://image/a']])
+            })
+        );
+        await waitFor(() =>
+            expect(view.container.querySelector('canvas')).not.toBeNull()
+        );
+        sigmaMock.refresh.mockClear();
+
+        view.rerender(
+            createElement(GraphView, {
+                urls: new Map([['usr_a', 'https://image/a']])
+            })
+        );
+        expect(sigmaMock.refresh).not.toHaveBeenCalled();
+
+        view.rerender(
+            createElement(GraphView, {
+                urls: new Map([['usr_a', 'https://image/a2']])
+            })
+        );
+        expect(sigmaMock.refresh).toHaveBeenCalledOnce();
+    });
+});
+
 function projectNode(
     graph: MutualFriendsSigmaGraph,
     options: SigmaOptions,
@@ -333,6 +382,31 @@ describe('buildSigmaGraph', () => {
         expect(
             regular.someNode((id) => regular.getNodeAttribute(id, 'forceLabel'))
         ).toBe(false);
+    });
+
+    it('raises the smallest nodes to the requested size without changing the largest', async () => {
+        const graph: MutualFriendGraph = {
+            nodes: [
+                { ...node('usr_hub'), degree: 4 },
+                { ...node('usr_leaf'), degree: 1 }
+            ],
+            links: [{ source: 'usr_hub', target: 'usr_leaf' }]
+        };
+        const options = {
+            graph,
+            layoutSettings: MUTUAL_GRAPH_LAYOUT_DEFAULTS,
+            communityIndexById: new Map<string, number>(),
+            namedCommunityIndexes: new Set<number>(),
+            theme: buildMutualFriendsGraphTheme(true)
+        };
+        const regular = await buildSigmaGraph(options);
+        const enlarged = await buildSigmaGraph({ ...options, minNodeSize: 10 });
+
+        expect(regular.getNodeAttribute('usr_leaf', 'baseSize')).toBe(8.5);
+        expect(enlarged.getNodeAttribute('usr_leaf', 'baseSize')).toBe(13);
+        expect(enlarged.getNodeAttribute('usr_hub', 'baseSize')).toBe(
+            regular.getNodeAttribute('usr_hub', 'baseSize')
+        );
     });
 
     it('maps the curvature setting to the built-in v4 path names', async () => {
@@ -579,9 +653,13 @@ describe('buildSigmaGraph', () => {
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
             context
         );
-        await renderGraph({ onSelectNode: vi.fn() });
+        const container = await renderGraph({ onSelectNode: vi.fn() });
         emit('enterNode', { node: 'usr_a' });
         emit('afterRender', { node: 'usr_a' });
+        expect(container.querySelector('canvas')?.style).toMatchObject({
+            width: '400px',
+            height: '300px'
+        });
         expect(drawMutualFriendHoverCard).toHaveBeenCalledWith(
             context,
             expect.objectContaining({
@@ -600,6 +678,226 @@ describe('buildSigmaGraph', () => {
         emit('afterRender', { node: 'usr_a' });
         expect(drawMutualFriendHoverCard).not.toHaveBeenCalled();
         expect(context.clearRect).toHaveBeenCalledWith(0, 0, 400, 300);
+    });
+
+    it('colors only the emphasized node label with the accent', async () => {
+        const graph = await buildSigmaGraph({
+            graph: GRAPH,
+            layoutSettings: MUTUAL_GRAPH_LAYOUT_DEFAULTS,
+            communityIndexById: new Map<string, number>(),
+            namedCommunityIndexes: new Set<number>(),
+            theme: buildMutualFriendsGraphTheme(true),
+            emphasizedNodeId: 'usr_target'
+        });
+        renderSigmaGraph({
+            graph,
+            container: document.createElement('div'),
+            instanceRef: { current: null },
+            resizeObserverRef: { current: null },
+            themeRef: {
+                current: {
+                    ...buildMutualFriendsGraphTheme(true),
+                    labelColor: '#e2e8f0',
+                    emphasisLabelColor: '#fde047'
+                }
+            },
+            selectedNodeIdRef: { current: '' },
+            crossCommunityOnlyRef: { current: false },
+            onSelectNode: vi.fn(),
+            hoverCardStringsRef: {
+                current: { connections: '', lastFetched: '', unavailable: '' }
+            }
+        });
+        const options = sigmaMock.options[0];
+
+        expect(projectNode(graph, options, 'usr_target').labelColor).toBe(
+            '#fde047'
+        );
+        expect(projectNode(graph, options, 'usr_a').labelColor).toBe('#e2e8f0');
+    });
+
+    it('keeps the colored dot until an avatar loads and never covers hollow nodes', async () => {
+        const images: {
+            src: string;
+            naturalWidth: number;
+            naturalHeight: number;
+            settle: () => void;
+        }[] = [];
+        vi.stubGlobal(
+            'Image',
+            class {
+                src = '';
+                naturalWidth = 0;
+                naturalHeight = 0;
+                settle = () => {};
+                constructor() {
+                    images.push(this);
+                }
+                decode() {
+                    return new Promise<void>((resolve) => {
+                        this.settle = resolve;
+                    });
+                }
+            }
+        );
+        const frames: FrameRequestCallback[] = [];
+        vi.stubGlobal(
+            'requestAnimationFrame',
+            (callback: FrameRequestCallback) => frames.push(callback)
+        );
+        vi.stubGlobal('cancelAnimationFrame', () => {
+            frames.length = 0;
+        });
+        const flushFrames = () => {
+            for (const callback of frames.splice(0)) {
+                callback(0);
+            }
+        };
+        const context = {
+            setTransform: vi.fn(),
+            clearRect: vi.fn(),
+            save: vi.fn(),
+            restore: vi.fn(),
+            beginPath: vi.fn(),
+            arc: vi.fn(),
+            clip: vi.fn(),
+            fill: vi.fn(),
+            drawImage: vi.fn(),
+            fillStyle: '',
+            globalAlpha: 1
+        };
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+            context as unknown as CanvasRenderingContext2D
+        );
+        const graph = await build();
+        graph.setNodeAttribute('usr_b', 'type', 'hollow');
+        const controller = renderSigmaGraph({
+            graph,
+            container: document.createElement('div'),
+            instanceRef: { current: null },
+            resizeObserverRef: { current: null },
+            themeRef: { current: buildMutualFriendsGraphTheme(true) },
+            selectedNodeIdRef: { current: '' },
+            crossCommunityOnlyRef: { current: false },
+            onSelectNode: vi.fn(),
+            hoverCardStringsRef: {
+                current: { connections: '', lastFetched: '', unavailable: '' }
+            },
+            nodeImageUrlByIdRef: {
+                current: new Map([
+                    ['usr_target', 'https://image/target'],
+                    ['usr_a', 'https://image/a'],
+                    ['usr_b', 'https://image/b']
+                ])
+            }
+        });
+
+        emit('afterRender', { node: '' });
+        expect(images.map((image) => image.src)).toEqual([
+            'https://image/target',
+            'https://image/a'
+        ]);
+        expect(context.drawImage).not.toHaveBeenCalled();
+
+        sigmaMock.refresh.mockClear();
+        Object.assign(images[1], { naturalWidth: 128, naturalHeight: 96 });
+        images[1].settle();
+        await Promise.resolve();
+        expect(sigmaMock.refresh).not.toHaveBeenCalled();
+        flushFrames();
+        expect(sigmaMock.refresh).toHaveBeenCalledOnce();
+        emit('afterRender', { node: '' });
+        expect(context.fill).toHaveBeenCalledOnce();
+        expect(context.fillStyle).toBe(
+            buildMutualFriendsGraphTheme(true).backgroundColor
+        );
+        expect(context.drawImage).toHaveBeenCalledOnce();
+        expect(context.drawImage).toHaveBeenCalledWith(
+            images[1],
+            16,
+            0,
+            96,
+            96,
+            expect.any(Number),
+            expect.any(Number),
+            expect.any(Number),
+            expect.any(Number)
+        );
+
+        sigmaMock.refresh.mockClear();
+        controller.dispose();
+        images[0].settle();
+        await Promise.resolve();
+        flushFrames();
+        expect(sigmaMock.refresh).not.toHaveBeenCalled();
+    });
+
+    it('shows avatars only for the hovered node and its neighbors when asked to', async () => {
+        const requested: string[] = [];
+        vi.stubGlobal(
+            'Image',
+            class {
+                set src(value: string) {
+                    requested.push(value);
+                }
+                decode() {
+                    return new Promise<void>(() => {});
+                }
+            }
+        );
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+            setTransform: vi.fn(),
+            clearRect: vi.fn()
+        } as unknown as CanvasRenderingContext2D);
+        const graph = await buildSigmaGraph({
+            graph: {
+                nodes: [node('usr_hub'), node('usr_near'), node('usr_far')],
+                links: [{ source: 'usr_hub', target: 'usr_near' }]
+            },
+            layoutSettings: MUTUAL_GRAPH_LAYOUT_DEFAULTS,
+            communityIndexById: new Map<string, number>(),
+            namedCommunityIndexes: new Set<number>(),
+            theme: buildMutualFriendsGraphTheme(true)
+        });
+        graph.updateEachNodeAttributes((_, attributes) => ({
+            ...attributes,
+            baseSize: 4
+        }));
+        renderSigmaGraph({
+            graph,
+            container: document.createElement('div'),
+            instanceRef: { current: null },
+            resizeObserverRef: { current: null },
+            themeRef: { current: buildMutualFriendsGraphTheme(true) },
+            selectedNodeIdRef: { current: '' },
+            crossCommunityOnlyRef: { current: false },
+            onSelectNode: vi.fn(),
+            hoverCardStringsRef: {
+                current: { connections: '', lastFetched: '', unavailable: '' }
+            },
+            nodeImageUrlByIdRef: {
+                current: new Map([
+                    ['usr_hub', 'https://image/hub'],
+                    ['usr_near', 'https://image/near'],
+                    ['usr_far', 'https://image/far']
+                ])
+            },
+            nodeImagesOnHover: true
+        });
+        const options = sigmaMock.options[0];
+
+        emit('afterRender', { node: '' });
+        expect(requested).toEqual([]);
+        expect(projectNode(graph, options, 'usr_near').size).toBe(4);
+
+        emit('enterNode', { node: 'usr_hub' });
+        emit('afterRender', { node: '' });
+        expect(requested.toSorted()).toEqual([
+            'https://image/hub',
+            'https://image/near'
+        ]);
+        expect(projectNode(graph, options, 'usr_near').size).toBe(12);
+        expect(projectNode(graph, options, 'usr_far').size).toBe(4);
     });
 
     it('reacts to a double click only once', async () => {
