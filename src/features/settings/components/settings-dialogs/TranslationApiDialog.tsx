@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 import {
     RuntimeModelSelect,
     type RuntimeModelRef
-} from '@/features/assistant/components/RuntimeModelSelect';
+} from '@/components/llm/RuntimeModelSelect';
 import {
     getEffectiveReasoningEffort,
     getModelReasoning,
     getValidReasoningEfforts,
     shouldShowReasoningEffortSelector
-} from '@/features/llm/reasoning';
+} from '@/lib/llmReasoning';
 import { getLanguageName } from '@/localization/index';
 import { useLanguageCodes } from '@/localization/useLanguageCodes';
 import type {
@@ -17,7 +17,8 @@ import type {
     TranslationProvider
 } from '@/platform/tauri/bindings';
 import { openExternalLink } from '@/services/entityMediaService';
-import { openLlmEndpointsManager } from '@/state/llmEndpointsStore';
+import { openLlmEndpointsManager } from '@/services/llmEndpointsService';
+import { SecretInput } from '@/ui/secret-input';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -27,7 +28,6 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/ui/shadcn/dialog';
-import { Input } from '@/ui/shadcn/input';
 import {
     Select,
     SelectContent,
@@ -413,9 +413,8 @@ export function TranslationApiDialog({
                             label={apiKeyLabel}
                             controlId="settings-translation-api-key"
                         >
-                            <Input
+                            <SecretInput
                                 id="settings-translation-api-key"
-                                type="text"
                                 name="translationApiKey"
                                 value={translationDraft.translationAPIKey}
                                 placeholder={apiKeyPlaceholder}

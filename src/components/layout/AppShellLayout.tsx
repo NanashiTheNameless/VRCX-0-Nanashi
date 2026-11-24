@@ -3,6 +3,11 @@ import { useLocation } from 'react-router';
 
 import { preloadRouteChunks } from '@/app/routes';
 import { SidePanel } from '@/components/sidebar/SidePanel';
+import {
+    STORAGE_KEYS,
+    readStoredText,
+    writeStoredText
+} from '@/lib/browserStorage';
 import { cn } from '@/lib/utils';
 import { restoreNormalWindowModeForIntent } from '@/services/windowModeService';
 import { useShellStore } from '@/state/shellStore';
@@ -12,7 +17,7 @@ import { AppStatusBar } from './AppStatusBar';
 import { KeepAliveOutlet } from './KeepAliveOutlet';
 import { useRightSidePanelVisibility } from './useRightSidePanelVisibility';
 
-const sidePanelStorageKey = 'VRCX_0_RightSidebarWidth';
+const sidePanelStorageKey = STORAGE_KEYS.rightSidebarWidth;
 
 function getResponsiveSidePanelWidth(preferredWidth: number): string {
     return `max(var(--vrcx-0-side-panel-min-width), min(${preferredWidth}px, calc(100% - var(--vrcx-0-main-content-preferred-min-width) - var(--vrcx-0-side-panel-resizer-width))))`;
@@ -27,7 +32,7 @@ function clampSidePanelWidth(value: string | number | null) {
 }
 
 function loadSidePanelWidth() {
-    return clampSidePanelWidth(localStorage.getItem(sidePanelStorageKey));
+    return clampSidePanelWidth(readStoredText(sidePanelStorageKey));
 }
 
 const MemoSidePanel = memo(SidePanel);
@@ -77,7 +82,7 @@ function ShellSidePanel({ sidebarWindowMode }: { sidebarWindowMode: boolean }) {
     }, [sidePanelWidth]);
 
     useEffect(() => {
-        localStorage.setItem(sidePanelStorageKey, String(sidePanelWidth));
+        writeStoredText(sidePanelStorageKey, String(sidePanelWidth));
     }, [sidePanelWidth]);
 
     useEffect(() => {

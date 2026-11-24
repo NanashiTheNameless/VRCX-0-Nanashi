@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import {
     CODE_SEARCH_LINK_ENGINES,
     isValidLinkTemplate,
@@ -20,7 +21,6 @@ import {
     SelectValue
 } from '@/ui/shadcn/select';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 const P = 'view.settings.integrations.code_search';

@@ -34,7 +34,8 @@ A connection has a name, a **base URL**, an **API type**, an API key, and its mo
   model in Settings > AI unless you assign it a separate model in the Content Translation
   card under Settings > Integrations.
 
-API keys are stored on your PC. Requests go only to the connection you chose.
+API keys are stored on your PC. Requests go only to the connection you chose. API key fields
+(here, for translation and for YouTube) hide what you type; the eye button shows it.
 
 ## Using it
 

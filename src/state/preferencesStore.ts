@@ -403,6 +403,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     wristOverlayShowDevices: true,
     wristOverlayShowBatteryPercent: false,
     wristOverlayTimeoutSeconds: 15,
+    wristOverlayShowSeconds: false,
     relaunchVRChatAfterCrash: false,
     vrcQuitFix: true,
     focusVrchatOnJoin: false,
@@ -690,6 +691,7 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
             next.wristOverlayTimeoutSeconds,
             { min: 5, max: 255, fallback: 15 }
         ),
+        wristOverlayShowSeconds: normalizeBool(next.wristOverlayShowSeconds),
         relaunchVRChatAfterCrash: normalizeBool(next.relaunchVRChatAfterCrash),
         vrcQuitFix: normalizeBool(next.vrcQuitFix),
         focusVrchatOnJoin: normalizeBool(next.focusVrchatOnJoin),

@@ -1,6 +1,7 @@
 import { FolderOpenIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { normalizeAvatarAutoCleanupPreference } from '@/shared/constants/settings';
 import { dataDirectoryPathForDisplay } from '@/shared/utils/dataDirectoryPath';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -29,7 +30,6 @@ import { AdoptionCensusField } from '../AdoptionCensusField';
 import { BrowseHistoryRetentionField } from '../BrowseHistoryRetentionField';
 import { DataExportFields } from '../DataExportFields';
 import { ProfileMergeFields } from '../ProfileMergeFields';
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsAdvancedTabState } from '../useSettingsAdvancedTabState';

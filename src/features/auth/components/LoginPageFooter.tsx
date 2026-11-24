@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { Button } from '@/ui/shadcn/button';
 
 import type { useLoginPageController } from '../useLoginPageController';
@@ -11,6 +13,7 @@ export function LoginPageFooter({
     onOpenGithub: LoginActions['openGithub'];
     onOpenIssues: LoginActions['openIssues'];
 }) {
+    const { t } = useTranslation();
     return (
         <div className="text-muted-foreground/65 mt-4 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-x-2 gap-y-1 text-center text-[0.7rem]">
             <div className="flex justify-end">
@@ -34,6 +37,7 @@ export function LoginPageFooter({
                     Issues
                 </Button>
             </div>
+            <div className="col-span-3">{t('view.login.unofficial')}</div>
         </div>
     );
 }

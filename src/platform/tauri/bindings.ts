@@ -134,6 +134,12 @@ export const commands = {
         __TAURI_INVOKE<void>('app__chatbox_typing_set', { typing }),
     appChatboxSamplesRender: (lines: ChatboxLinePreviewInput[]) =>
         __TAURI_INVOKE<string[]>('app__chatbox_samples_render', { lines }),
+    appHeartRateStatusGet: () =>
+        __TAURI_INVOKE<HeartRateStatus>('app__heart_rate_status_get'),
+    appHeartRateConnectedSet: (connected: boolean) =>
+        __TAURI_INVOKE<HeartRateStatus>('app__heart_rate_connected_set', {
+            connected
+        }),
     appStartBackgroundMode: () =>
         __TAURI_INVOKE<BackendRuntimeSnapshot>('app__start_background_mode'),
     appBackendRuntimeCombinedSnapshotGet: () =>
@@ -3811,6 +3817,7 @@ export type BackendRuntimeEventPayloadMap = {
     gameIsolationState: GameIsolationSnapshot;
     chatboxState: ChatboxStatus;
     chatboxConfig: ChatboxConfig;
+    heartRateState: HeartRateStatus;
     privacyLockState: PrivacyLockSnapshot;
     desktopWidgetState: DesktopWidgetSnapshot;
 };
@@ -4141,7 +4148,8 @@ export type ChatboxVariable =
     | 'gpu'
     | 'vram'
     | 'gputemp'
-    | 'session';
+    | 'session'
+    | 'heartrate';
 
 export type CleanupWarning = {
     kind: CleanupWarningKind;
@@ -6266,6 +6274,18 @@ export type GroupSearchParams = {
     query?: string | null;
     offset?: number | null;
     n?: number | null;
+};
+
+export type HeartRatePhase = 'unavailable' | 'off' | 'waiting' | 'connected';
+
+export type HeartRateProblem = 'incompatible' | 'permissionDenied';
+
+export type HeartRateStatus = {
+    enabled: boolean;
+    phase: HeartRatePhase;
+    deviceName: string | null;
+    bpm: number | null;
+    problem: HeartRateProblem | null;
 };
 
 export type HostArchitecture = 'x86_64' | 'aarch64' | 'unknown';

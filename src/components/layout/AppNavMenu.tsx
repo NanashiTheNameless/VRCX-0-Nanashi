@@ -8,12 +8,19 @@ import {
     type ShortcutHintItem
 } from '@/components/keyboard/ShortcutHintPanel';
 import type { Dashboard } from '@/repositories/dashboardRepository';
+import {
+    createDashboard,
+    deleteDashboard,
+    ensureDashboardsLoaded
+} from '@/services/dashboardService';
 import { startFreeStoreItemWatch } from '@/services/freeStoreItemService';
 import { startInventoryBundleWatch } from '@/services/inventoryBundleService';
 import { markAllNotificationsSeenWithFeedback } from '@/services/notificationMarkAllSeenService';
 import { setNavbarCollapsedPreference } from '@/services/preferencesService';
+import { removeShellMenuNotify } from '@/services/shellNotificationDotService';
 import { toast } from '@/services/toastService';
 import { triggerToolByKey } from '@/services/toolActionService';
+import { refreshVrcNotificationsForCurrentUser } from '@/services/vrcNotificationService';
 import { DASHBOARD_NAV_KEY_PREFIX } from '@/shared/constants/dashboard';
 import { useDashboardStore } from '@/state/dashboardStore';
 import {
@@ -187,12 +194,8 @@ function useAppNavNotifications({
 }) {
     const { t } = useTranslation();
     const notifiedMenus = useShellStore((state) => state.notifiedMenus);
-    const removeNavNotification = useShellStore((state) => state.removeNotify);
     const vrcUnseenNotificationCount = useVrcNotificationStore(
         (state) => state.unseenCount
-    );
-    const loadVrcNotifications = useVrcNotificationStore(
-        (state) => state.refreshForCurrentUser
     );
     const hasUnseenBundles = useInventoryBundleStore(hasUnseenInventoryBundles);
     const freeStoreItemNotifications = usePreferencesStore(
@@ -214,8 +217,8 @@ function useAppNavNotifications({
         if (sessionPhase !== 'ready' || !currentUserId) {
             return;
         }
-        loadVrcNotifications().catch(() => {});
-    }, [currentUserId, loadVrcNotifications, sessionPhase]);
+        refreshVrcNotificationsForCurrentUser().catch(() => {});
+    }, [currentUserId, sessionPhase]);
 
     useEffect(() => {
         if (sessionPhase !== 'ready' || !currentUserId) {
@@ -239,8 +242,8 @@ function useAppNavNotifications({
         if (!activeIndex) {
             return;
         }
-        removeNavNotification(activeIndex);
-    }, [activeIndex, removeNavNotification]);
+        removeShellMenuNotify(activeIndex);
+    }, [activeIndex]);
 
     async function markAllRead() {
         await markAllNotificationsSeenWithFeedback(
@@ -248,7 +251,7 @@ function useAppNavNotifications({
                 'component.app_nav_menu.toast.failed_to_mark_notifications_as_seen'
             )
         );
-        removeNavNotification('notification');
+        removeShellMenuNotify('notification');
     }
 
     return {
@@ -266,8 +269,6 @@ function useAppNavDashboardActions({
     navigate: Navigation;
 }) {
     const { t } = useTranslation();
-    const createDashboard = useDashboardStore((state) => state.createDashboard);
-    const deleteDashboard = useDashboardStore((state) => state.deleteDashboard);
     const setEditingDashboardId = useDashboardStore(
         (state) => state.setEditingDashboardId
     );
@@ -444,9 +445,6 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
         (state) => state.shortcutHintsVisible
     );
     const dashboards = useDashboardStore((state) => state.dashboards);
-    const ensureDashboardsLoaded = useDashboardStore(
-        (state) => state.ensureLoaded
-    );
     const sessionPhase = useSessionStore((state) => state.sessionPhase);
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const preferencesHydrated = usePreferencesStore(
@@ -507,7 +505,7 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
 
     useEffect(() => {
         ensureDashboardsLoaded().catch(() => {});
-    }, [ensureDashboardsLoaded]);
+    }, []);
 
     useEffect(() => {
         const handleCustomizeRequested = () => {

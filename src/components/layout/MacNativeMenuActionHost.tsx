@@ -22,6 +22,7 @@ import {
 } from '@/services/shellIntegrationService';
 import { normalizeZoomLevel } from '@/services/themeService';
 import { toast } from '@/services/toastService';
+import { openVrcNotificationCenter } from '@/services/vrcNotificationService';
 import {
     restoreNormalWindowModeForIntent,
     runAfterRestoringNormalWindow
@@ -32,7 +33,6 @@ import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useShellStore } from '@/state/shellStore';
-import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 
 const MAC_NATIVE_MENU_ACTION_EVENT = 'macNativeMenuAction';
 const ZOOM_STEP = 10;
@@ -77,9 +77,6 @@ export function MacNativeMenuActionHost() {
         useQuickSearchActions();
     const notificationLayout = usePreferencesStore(
         (state) => state.notificationLayout
-    );
-    const openVrcNotificationCenter = useVrcNotificationStore(
-        (state) => state.openCenter
     );
     const navbarOpen = useShellStore((state) => state.sidebarOpen);
     const zoomLevel = useShellStore((state) => state.zoomLevel);
@@ -165,7 +162,7 @@ export function MacNativeMenuActionHost() {
             return;
         }
         openVrcNotificationCenter();
-    }, [navigate, notificationLayout, openVrcNotificationCenter]);
+    }, [navigate, notificationLayout]);
 
     const handleMenuAction = useCallback(
         (payload: unknown) => {

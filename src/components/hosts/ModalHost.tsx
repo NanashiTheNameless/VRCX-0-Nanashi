@@ -127,7 +127,7 @@ export function ModalHost() {
                 >
                     <DialogHeader>
                         <DialogTitle>{renderedAlertDialog.title}</DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="wrap-anywhere whitespace-pre-line">
                             {renderedAlertDialog.description}
                         </DialogDescription>
                     </DialogHeader>

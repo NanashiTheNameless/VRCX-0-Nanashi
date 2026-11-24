@@ -4,17 +4,16 @@ import { useTranslation } from 'react-i18next';
 
 import { formatDateTime } from '@/lib/dateTime';
 import { echarts } from '@/lib/echarts';
+import {
+    useActivityPalette,
+    type ActivityPalette
+} from '@/lib/useActivityPalette';
 import type {
     ActivityPageSeries,
     ActivitySeriesPoint
 } from '@/platform/tauri/bindings';
 import { displayLocalToEpoch } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
-
-import {
-    useActivityPalette,
-    type ActivityPalette
-} from '../useActivityPalette';
 
 const CHART_HEIGHT = 210;
 

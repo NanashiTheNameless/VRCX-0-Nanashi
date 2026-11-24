@@ -2044,6 +2044,10 @@ impl DesktopRuntimeHostState {
         self.desktop.services.chatbox()
     }
 
+    pub fn heart_rate(&self) -> Arc<crate::heart_rate::HeartRateRuntime> {
+        self.desktop.services.heart_rate()
+    }
+
     pub fn desktop_widget(&self) -> Arc<crate::desktop_widget::DesktopWidget> {
         Arc::clone(&self.desktop.desktop_widget)
     }
@@ -2304,6 +2308,10 @@ impl DesktopRuntimeProfileExtension {
         self.desktop
             .app_update
             .start_loop(state.desktop_assembly().tasks().clone());
+        self.desktop
+            .services
+            .heart_rate()
+            .start(state.desktop_assembly().tasks());
         if !self
             .app_launcher_events_started
             .swap(true, Ordering::AcqRel)

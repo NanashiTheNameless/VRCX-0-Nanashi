@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import userProfileRepository from '@/repositories/userProfileRepository';
 import { enrichEntityDialogHistory } from '@/services/dialogService';
@@ -69,9 +69,7 @@ export function useUserDialogProfileResource({
         [activitySnapshot, normalizedUserId]
     );
     const localSnapshotRef = useRef(normalizedLocalSnapshot);
-    localSnapshotRef.current = normalizedLocalSnapshot;
     const activitySnapshotRef = useRef(normalizedActivitySnapshot);
-    activitySnapshotRef.current = normalizedActivitySnapshot;
     const avatarHydrationKeyRef = useRef('');
     const [baseProfile, setBaseProfile] = useState<UserDialogProfileSnapshot>(
         () => normalizedLocalSnapshot
@@ -104,7 +102,6 @@ export function useUserDialogProfileResource({
         friendPresenceSource
     ]);
     const profileRef = useRef(profile);
-    profileRef.current = profile;
     const currentAvatar = normalizeUserId(profile?.currentAvatar);
     const currentAvatarImageUrl =
         normalizedAvatarName(profile?.currentAvatarImageUrl) ||
@@ -119,8 +116,14 @@ export function useUserDialogProfileResource({
         userId: normalizedUserId,
         endpoint: currentEndpoint
     });
-    activeUserTargetRef.current.userId = normalizedUserId;
-    activeUserTargetRef.current.endpoint = currentEndpoint;
+
+    useLayoutEffect(() => {
+        localSnapshotRef.current = normalizedLocalSnapshot;
+        activitySnapshotRef.current = normalizedActivitySnapshot;
+        profileRef.current = profile;
+        activeUserTargetRef.current.userId = normalizedUserId;
+        activeUserTargetRef.current.endpoint = currentEndpoint;
+    });
 
     const effectiveLoadStatus =
         normalizedUserId && !profile && loadStatus !== 'error'

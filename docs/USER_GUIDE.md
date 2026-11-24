@@ -16,7 +16,10 @@ For more detail, see [PAGES.md](PAGES.md), [DIALOGS.md](DIALOGS.md),
 
 - **Install** the build for your system from this fork's releases; see [INSTALL.md](INSTALL.md).
 - **Sign in** with your VRChat account. The app talks to VRChat directly, and your login stays on
-  your PC unless you set up the Self-hosted Recorder, which needs it to record for you.
+  your PC unless you set up the Self-hosted Recorder, which needs it to record for you. The
+  sign-in page explains why the account is needed. The proxy and backup restore actions sit
+  next to the language picker at the top, and the button to import data from VRCX at the
+  bottom.
 - **Coming from VRCX or VRCX-0?** When this app has no profile yet, its first launch imports
   upstream VRCX-0's data, or original VRCX's if there is no VRCX-0. The other app's files are
   only read, never changed, so both apps can stay installed. A later import from VRCX or

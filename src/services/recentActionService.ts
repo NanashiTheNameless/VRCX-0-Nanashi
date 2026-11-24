@@ -1,10 +1,14 @@
+import {
+    STORAGE_KEYS,
+    readStoredJson,
+    writeStoredText
+} from '@/lib/browserStorage';
 import { MINUTE_MS, MINUTES_PER_DAY } from '@/shared/constants/time';
 import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
-import { safeJsonParse } from '@/shared/utils/json';
 import { isRecord } from '@/shared/utils/record';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
-const STORAGE_KEY = 'VRCX_recentActions';
+const STORAGE_KEY = STORAGE_KEYS.recentActions;
 export type RecentActionType =
     | 'Send Friend Request'
     | 'Request Invite'
@@ -36,7 +40,7 @@ function readActions(): Record<string, number> {
     if (cachedActions) {
         return cachedActions;
     }
-    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEY));
+    const parsed = readStoredJson(STORAGE_KEY);
     const versioned =
         isRecord(parsed) && parsed.v === 2 && isRecord(parsed.actions);
     const stored = versioned ? parsed.actions : parsed;
@@ -51,7 +55,7 @@ function readActions(): Record<string, number> {
         }
         if (!versioned) {
             try {
-                localStorage.setItem(
+                writeStoredText(
                     STORAGE_KEY,
                     JSON.stringify({ v: 2, actions: cachedActions })
                 );
@@ -65,7 +69,7 @@ function readActions(): Record<string, number> {
 
 function writeActions(actions: Record<string, number>): void {
     cachedActions = actions;
-    localStorage.setItem(
+    writeStoredText(
         STORAGE_KEY,
         JSON.stringify({ v: 2, actions: cachedActions })
     );

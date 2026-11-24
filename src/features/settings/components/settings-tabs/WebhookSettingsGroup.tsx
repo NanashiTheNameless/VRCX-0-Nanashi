@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { HighlightedCodeBlock } from '@/components/HighlightedCodeBlock';
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { formatDateFilter } from '@/lib/dateTime';
 import type {
     NotificationWebhookFormat,
@@ -33,7 +34,6 @@ import {
 import { Switch } from '@/ui/shadcn/switch';
 
 import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 const GENERIC_WEBHOOK_EXAMPLE = `{

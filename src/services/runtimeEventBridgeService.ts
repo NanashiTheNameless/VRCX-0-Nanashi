@@ -12,7 +12,6 @@ import { useFriendLogStore } from '@/state/friendLogStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
-import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 import { useVrcxCustomTagStore } from '@/state/vrcxCustomTagStore';
 
 import { handleAppLauncherSnapshotEvent } from './appLauncherSnapshotService';
@@ -100,6 +99,7 @@ import {
     handleAppUpdateDownloadStatusSnapshot,
     handleAppUpdateInstalledEvent
 } from './updateInstallService';
+import { loadVrcNotificationsForCurrentUser } from './vrcNotificationService';
 import { applyVrcStatusSnapshot } from './vrcStatusService';
 
 function reconcilePendingBackendRealtimeProjectionEvents(): void {
@@ -135,15 +135,12 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
             return;
         }
         useFriendLogStore.getState().bumpRevision();
-        void useVrcNotificationStore
-            .getState()
-            .loadForCurrentUser()
-            .catch((error) => {
-                console.warn(
-                    'Failed to refresh notifications after RemoteSync import:',
-                    error
-                );
-            });
+        void loadVrcNotificationsForCurrentUser().catch((error: unknown) => {
+            console.warn(
+                'Failed to refresh notifications after RemoteSync import:',
+                error
+            );
+        });
         handleFavoritesChangedEvent({
             ownerUserId: event.payload.ownerUserId,
             endpoint: auth.currentUserEndpoint,
@@ -270,6 +267,11 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
 
     if (event.name === 'chatboxConfig') {
         useChatboxStore.getState().setSavedConfig(event.payload);
+        return;
+    }
+
+    if (event.name === 'heartRateState') {
+        useChatboxStore.getState().setHeartRate(event.payload);
         return;
     }
 
@@ -589,6 +591,7 @@ export async function bindRuntimeEvents(): Promise<() => void> {
         'gameIsolationState',
         'chatboxState',
         'chatboxConfig',
+        'heartRateState',
         'privacyLockState',
         'desktopWidgetState',
         'gameLogProjection',

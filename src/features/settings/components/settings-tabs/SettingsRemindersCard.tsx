@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import {
     REMINDERS_I18N,
     ReminderList,
     useReminders
 } from '@/features/reminders/ReminderList';
 import { Button } from '@/ui/shadcn/button';
-
-import { SettingsCard } from '../SettingsCard';
 
 // Fork: reminders live on their own page; Settings lists them with a link.
 export function SettingsRemindersCard() {

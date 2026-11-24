@@ -3,10 +3,6 @@ import {
     resolveSelectedFavoriteGroupKeys
 } from '@/domain/favorites/favoriteGroupSelection';
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
-import {
-    presenceCanRequestInvite,
-    presenceOf
-} from '@/domain/friends/presence';
 import type { FriendRecordInput } from '@/domain/friends/types';
 import { isUserId } from '@/shared/constants/vrchatIds';
 import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
@@ -151,11 +147,6 @@ export function canExpandFeedRow(row: FeedRow): boolean {
         default:
             return false;
     }
-}
-
-export function canRequestInviteFromFeedFriend(friend: FriendLike) {
-    const presence = presenceOf(friend);
-    return Boolean(presence && presenceCanRequestInvite(presence));
 }
 
 export function buildFeedFavoriteIdSet({

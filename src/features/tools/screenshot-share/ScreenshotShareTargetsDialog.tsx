@@ -6,7 +6,7 @@ import {
     Trash2Icon,
     Undo2Icon
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { formatCompactDateTime } from '@/lib/dateTime';
@@ -37,7 +37,12 @@ import { Switch } from '@/ui/shadcn/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 
 import { ScreenshotShareOptions } from './ScreenshotShareOptions';
-import { screenshotShareErrorText } from './screenshotShareService';
+import {
+    deleteScreenshotShareTarget,
+    saveScreenshotShareTarget,
+    screenshotShareErrorText
+} from './screenshotShareService';
+import { useScreenshotShareHistory } from './useScreenshotShareHistory';
 
 const DEFAULT_SCREENSHOT_SHARE_FIELDS: ScreenshotShareFields = {
     world: true,
@@ -152,22 +157,9 @@ function TargetRow({
 
 function HistoryList() {
     const { t } = useTranslation();
-    const [records, setRecords] = useState<ScreenshotShareRecord[] | null>(
-        null
-    );
+    const { records, setRecords, loadFailed, reload } =
+        useScreenshotShareHistory();
     const [busyId, setBusyId] = useState<string | null>(null);
-
-    useEffect(() => {
-        let active = true;
-        void commands.appGetScreenshotShareHistory().then((history) => {
-            if (active) {
-                setRecords(history);
-            }
-        });
-        return () => {
-            active = false;
-        };
-    }, []);
 
     async function retract(record: ScreenshotShareRecord) {
         setBusyId(record.id);
@@ -189,6 +181,21 @@ function HistoryList() {
         }
     }
 
+    if (loadFailed) {
+        return (
+            <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-8 text-center text-sm">
+                {t('view.tools.screenshot_share.history.load_failed')}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={reload}
+                >
+                    {t('common.action.retry')}
+                </Button>
+            </div>
+        );
+    }
     if (!records) {
         return null;
     }
@@ -264,8 +271,6 @@ export function ScreenshotShareTargetsDialog({
 }) {
     const { t } = useTranslation();
     const targets = useScreenshotShareStore((state) => state.targets);
-    const save = useScreenshotShareStore((state) => state.save);
-    const remove = useScreenshotShareStore((state) => state.remove);
     const [tab, setTab] = useState<'targets' | 'history'>('targets');
     const [draft, setDraft] = useState<TargetDraft | null>(null);
     const [saving, setSaving] = useState(false);
@@ -283,7 +288,7 @@ export function ScreenshotShareTargetsDialog({
         setSaving(true);
         setError(null);
         try {
-            await save({
+            await saveScreenshotShareTarget({
                 id: draft.id,
                 name: draft.name.trim(),
                 url: draft.url.trim() || null,
@@ -300,7 +305,7 @@ export function ScreenshotShareTargetsDialog({
 
     async function toggleQuick(target: ScreenshotShareTarget) {
         try {
-            await save({
+            await saveScreenshotShareTarget({
                 id: target.id,
                 name: target.name,
                 url: null,
@@ -314,7 +319,7 @@ export function ScreenshotShareTargetsDialog({
 
     async function deleteTarget(target: ScreenshotShareTarget) {
         try {
-            await remove(target.id);
+            await deleteScreenshotShareTarget(target.id);
         } catch (deleteError) {
             toast.add({ type: 'error', title: errorMessage(deleteError) });
         }

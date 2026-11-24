@@ -394,7 +394,7 @@
             },
             "confirm": {
                 "title": "Import world collection?",
-                "description": "\"{title}\" by {author} · {count} worlds",
+                "description": "\"{title}\" by {author} - {count} worlds",
                 "worlds_preview": "Includes: {names}",
                 "confirm": "Import to VRCX-0-Nanashi",
                 "cancel": "Cancel"
@@ -440,7 +440,7 @@
         "restart_now": "Restart now",
         "restart_later": "Later",
         "create_backup_first": "Open backup tools",
-        "space_summary": "Space needed: {required} · Available: {available}",
+        "space_summary": "Space needed: {required} - Available: {available}",
         "insufficient_space": "There isn't enough space to copy your data. Choose a folder on another drive or free up some space.",
         "contents_notice": "Copy your records and settings to the new folder. The original data will stay in the old folder.",
         "unsupported_storage_warning": "Network drives, cloud-synced folders and removable drives aren't supported. Using them may damage your data.",
@@ -789,6 +789,8 @@
             "save": "Save",
             "search": "Search",
             "select": "Select",
+            "show_secret": "Show",
+            "hide_secret": "Hide",
             "cancel": "Cancel",
             "view_options": "View options",
             "cut": "Cut",
@@ -840,6 +842,9 @@
             "retry": "Retry"
         },
         "error": {
+            "realtime_event_failed": "Couldn't apply a live update",
+            "runtime_bootstrap_failed": "VRCX-0-Nanashi couldn't finish starting up",
+            "language_sync_failed": "Couldn't switch the display language",
             "action_failed": "Couldn't complete that action",
             "failed_to_load_data": "Couldn't load the data",
             "failed_open_instance_in_vrchat_falling_back_to_self_invite": "Couldn't open the instance in VRChat. Sending you a self-invite instead.",
@@ -869,12 +874,20 @@
             "kvk": "Korean Sign Language",
             "nzs": "New Zealand Sign Language",
             "tws": "Teochew"
+        },
+        "friend_action": {
+            "request_invite_title": "Request invite?",
+            "request_invite_confirm": "Request Invite",
+            "invite_request_sent": "Invite request sent",
+            "failed_to_request_invite": "Failed to request invite",
+            "boop_sent": "Boop sent",
+            "failed_to_send_boop": "Failed to send boop"
         }
     },
     "economy": {
         "free": "Free",
         "vrc_plus_price": "{price} with VRC+",
-        "subscription_term": "Subscription · {duration}",
+        "subscription_term": "Subscription - {duration}",
         "permanent": "Permanent",
         "owned": "Owned",
         "store_header": "Store",
@@ -943,7 +956,7 @@
         "turn_off": "Turn off Game Isolation",
         "toast_on": "Game Isolation turned on",
         "toast_off": "Game Isolation turned off",
-        "toast_off_running": "Game Isolation turned off · Recording resumes from the next room",
+        "toast_off_running": "Game Isolation turned off - Recording resumes from the next room",
         "failed": "Couldn't change Game Isolation",
         "badge": "Isolated",
         "menu_item": "Game Isolation...",
@@ -1293,7 +1306,7 @@
             "change_title": "Change lock password",
             "change_description": "Enter your current lock password, then choose a new one.",
             "clear_title": "Remove lock password",
-            "clear_description": "Enter your VRChat account password to remove the lock password. It is only checked against the password saved locally in VRCX-0-Nanashi; nothing is sent to the VRChat servers."
+            "clear_description": "Confirm it is you with your VRChat account password or a QR code to remove the lock password. The account password is only checked against the copy saved locally in VRCX-0-Nanashi; nothing is sent to the VRChat servers."
         },
         "recover": {
             "description": "Enter your VRChat account password to remove the lock. It is only checked against the password saved locally in VRCX-0-Nanashi; nothing is sent to the VRChat servers.",
@@ -1352,7 +1365,7 @@
         "search_groups": "Groups",
         "search_own_groups": "My Groups",
         "search_direct_access": "Paste a link or ID",
-        "search_scope_direct_access": "wrld_ · usr_ · vrchat.com/...",
+        "search_scope_direct_access": "wrld_ - usr_ - vrchat.com/...",
         "search_open_direct": "Open this link or ID",
         "search_clipboard_detected": "Link or ID detected in clipboard. Press Enter to open.",
         "search_joined_groups": "Joined Groups",
@@ -1465,8 +1478,6 @@
         },
         "success": {
             "vrchat_launch_request_sent": "Opened in VRChat",
-            "invite_request_sent": "Invite request sent",
-            "boop_sent": "Boop sent",
             "friend_and_favorite_snapshots_refreshed": "Friends list and favorites refreshed"
         },
         "error": {
@@ -1505,14 +1516,12 @@
             "backToSavedAccounts": "Back to saved accounts",
             "proxy_settings": "Proxy Settings",
             "proxy_description": "The proxy server used to connect to VRChat, including sign-in. Supports 127.0.0.1:7890, http://127.0.0.1:7890, and socks5://127.0.0.1:7890.",
+            "more_options": "More options",
             "field": {
                 "username": "Username or Email",
                 "password": "Password",
-                "saveCredentials": "Save Account"
-            },
-            "placeholder": {
-                "account": "VRChat account",
-                "password": "VRChat password"
+                "saveCredentials": "Save Account",
+                "saveCredentialsHint": "Signs you back in automatically if the session drops"
             },
             "validation": {
                 "username_required": "Username or email is required",
@@ -1542,6 +1551,15 @@
             "expired_account": {
                 "title": "{name}'s session has expired",
                 "description": "No password is saved for this account, so VRCX-0-Nanashi will not sign in again automatically. Enter your password or scan a new QR code."
+            },
+            "tagline": "A desktop companion for VRChat: friend feed, game log, favorites",
+            "unofficial": "Not an official VRChat product",
+            "account_explainer": {
+                "title": "Why do I need to sign in with my VRChat account?",
+                "account_data": "Your friends' status, feed and favorites come from your account. It's the same information you can see in game.",
+                "password_destination": "Your username and password are sent only to VRChat's official servers.",
+                "local_storage": "Sign-in data is stored on this computer, and you can remove it at any time.",
+                "open_source": "The source code is public on GitHub."
             }
         },
         "feed": {
@@ -1620,7 +1638,6 @@
                 "cannot_invite_no_current_vrchat_location_is_available": "Cannot invite: you're not in an instance right now",
                 "cannot_invite_from_the_current_instance_type": "Cannot invite: your current instance doesn't allow invites",
                 "cannot_invite_current_location_is_not_a_concrete_instance": "Cannot invite: you're not currently in a joinable instance",
-                "cannot_request_invite_friend_is_not_online": "Cannot request invite: friend is not online",
                 "feed_query_failed": "Couldn't load the feed"
             },
             "label": {
@@ -1634,9 +1651,7 @@
                 "stayed": "Stayed {duration}"
             },
             "success": {
-                "vrchat_launch_request_sent": "Opened in VRChat",
-                "invite_request_sent": "Invite request sent",
-                "boop_sent": "Boop sent"
+                "vrchat_launch_request_sent": "Opened in VRChat"
             },
             "loading": {
                 "loading_feed_rows": "Loading feed entries"
@@ -1655,15 +1670,11 @@
                 "failed_to_load_instance_history": "Failed to load instance history",
                 "failed_to_launch_instance": "Failed to launch instance",
                 "failed_to_send_self_invite": "Failed to send self-invite",
-                "failed_to_send_invite": "Failed to send invite",
-                "failed_to_request_invite": "Failed to request invite",
-                "failed_to_send_boop": "Failed to send boop"
+                "failed_to_send_invite": "Failed to send invite"
             },
             "modal": {
                 "send_invite": "Send invite?",
                 "invite": "Invite",
-                "request_invite": "Request invite?",
-                "request_invite_2": "Request Invite",
                 "send": "Send"
             },
             "dynamic": {
@@ -2042,8 +2053,6 @@
                 "local_favorite_group_deleted": "Local favorite group deleted",
                 "avatar_history_cleared": "Avatar history cleared",
                 "vrchat_launch_request_sent": "Opened in VRChat",
-                "invite_request_sent": "Invite request sent",
-                "boop_sent": "Boop sent",
                 "avatar_selected": "Avatar selected",
                 "copied_selected_favorite_ids": "Copied selected favorite IDs",
                 "selected_favorites_removed": "Selected favorites removed",
@@ -2400,9 +2409,7 @@
             "success": {
                 "friend_detail_loading_canceled": "Friend detail loading canceled",
                 "roster_bootstrap_did_not_complete": "Couldn't load your friends",
-                "vrchat_launch_request_sent": "Opened in VRChat",
-                "invite_request_sent": "Invite request sent",
-                "boop_sent": "Boop sent"
+                "vrchat_launch_request_sent": "Opened in VRChat"
             },
             "empty": {
                 "no_friends_are_available_for_mutual_friends_loading": "You have no friends to load mutual friends for.",
@@ -2552,9 +2559,9 @@
             "header": "Tools",
             "recent": "Recently used",
             "status": {
-                "rules_enabled": "{count} rules · On",
-                "rules_enabled_of_total": "{enabled}/{total} rules · On",
-                "rules_configured_off": "{count} rules · Off",
+                "rules_enabled": "{count} rules - On",
+                "rules_enabled_of_total": "{enabled}/{total} rules - On",
+                "rules_configured_off": "{count} rules - Off",
                 "last_backup": "Backed up {date}",
                 "connections_configured": "{count} connections",
                 "apps_count": "{count} apps",
@@ -2962,7 +2969,8 @@
                 },
                 "history": {
                     "empty": "Nothing sent yet",
-                    "summary": "{date} · {count} image(s)",
+                    "load_failed": "Couldn't load what you've sent",
+                    "summary": "{date} - {count} image(s)",
                     "open": "Open in Discord",
                     "retract": "Delete from Discord"
                 },
@@ -3060,8 +3068,6 @@
                 "api_kind_description": "The request format the server speaks. Most providers, LM Studio, llama.cpp and vLLM use OpenAI-compatible. Local and LAN servers (http://, 192.168.x.x) work with no API key. Azure: base URL is the deployment URL (add ?api-version=... to pin a version). Bedrock: use a Bedrock API key and the bedrock-runtime URL for your region. Vertex AI: use an express-mode API key or a gcloud access token.",
                 "headers": "Extra headers",
                 "headers_description": "Optional. One per line as Name: value. Sent with every request, for gateways that need custom auth.",
-                "show_key": "Show key",
-                "hide_key": "Hide key",
                 "models_description": "Detect available models, then select the ones to use in the AI Assistant and translation.",
                 "models_search": "Search models",
                 "models_selected": "{count} models selected",
@@ -3085,12 +3091,13 @@
                     "open": "Get VRCOSC"
                 },
                 "save_failed": "Couldn't save Chatbox settings.",
+                "load_failed": "Couldn't load Chatbox settings.",
                 "status": {
                     "off": "Off",
                     "manual": "Showing your message",
                     "afk": "AFK",
-                    "game_not_running": "Paused · VRChat isn't running",
-                    "isolated": "Paused · Game isolation is on",
+                    "game_not_running": "Paused - VRChat isn't running",
+                    "isolated": "Paused - Game isolation is on",
                     "showing": "Showing status"
                 },
                 "composer": {
@@ -3098,18 +3105,20 @@
                     "placeholder": "Type a message",
                     "translation": "Translation",
                     "send": "Send",
+                    "translate": "Translate",
                     "cancel": "Cancel",
                     "translating": "Translating...",
                     "translated": "Translation",
                     "shorten": "Shorten with AI",
                     "too_long": "Over the {max}-character limit",
-                    "hint_direct": "Enter sends · Shift+Enter adds a line",
-                    "hint_translate": "Enter translates · check it, then send",
+                    "hint_direct": "Enter sends - Shift+Enter adds a line",
+                    "hint_translate": "Enter translates - check it, then send",
                     "translation_failed": "Couldn't translate this message.",
                     "send_failed": "Couldn't send the message.",
                     "game_not_running": "Start VRChat to send messages.",
                     "isolated": "Turn off game isolation to send messages.",
                     "translation_settings": "Translation settings",
+                    "options": "Message options",
                     "set_up_translation": "Set up translation",
                     "shorten_needs_llm": "To shorten with AI, use an LLM in translation settings.",
                     "send_phrase": "Send",
@@ -3126,6 +3135,7 @@
                     "remove_page": "Remove page",
                     "empty_page": "Add a line to show something on this page.",
                     "enabled": "Show status",
+                    "summary": "{on} of {total} pages on",
                     "add_line": "Add line",
                     "blank_line": "Blank line",
                     "remove_line": "Remove line",
@@ -3142,7 +3152,7 @@
                 "afk": {
                     "title": "AFK",
                     "go_afk": "Go AFK",
-                    "back": "I'm back",
+                    "active": "You're AFK now",
                     "auto_headset": "Switch to AFK when you take off your headset",
                     "auto_headset_hint": "Needs Wrist Overlay or HMD Notifications turned on.",
                     "text": "AFK text",
@@ -3150,7 +3160,7 @@
                     "show_duration": "Show how long you have been away"
                 },
                 "settings": {
-                    "title": "Settings",
+                    "connection": "OSC connection",
                     "host": "Address",
                     "port": "Port",
                     "typing_indicator": "Show the typing indicator (...) while you type",
@@ -3162,7 +3172,7 @@
                 "editor": {
                     "insert_variable": "Insert value",
                     "insert_symbol": "Symbols",
-                    "presets": "Styles",
+                    "presets": "Presets",
                     "template_placeholder": "Type text and insert values"
                 },
                 "variables": {
@@ -3179,7 +3189,8 @@
                     "gpu": "GPU usage",
                     "vram": "VRAM",
                     "gputemp": "GPU temperature",
-                    "session": "Session time"
+                    "session": "Session time",
+                    "heartrate": "Heart rate"
                 },
                 "formats": {
                     "hour12": "12-hour",
@@ -3208,8 +3219,25 @@
                     "time": "Time",
                     "music": "Music",
                     "system": "System",
-                    "session": "Session"
-                }
+                    "session": "Session",
+                    "heart_rate": "Heart rate"
+                },
+                "heart_rate": {
+                    "title": "Heart rate",
+                    "connect": "Connect",
+                    "off": "Not connected",
+                    "unavailable": "No Bluetooth found on this computer, or it's turned off",
+                    "waiting": "Waiting for {device}...",
+                    "connected": "Connected to {device} - {bpm} bpm",
+                    "no_reading": "Connected to {device} - no reading",
+                    "incompatible": "That device doesn't share heart rate. Connect again to pick another one.",
+                    "permission_denied": "Bluetooth access is blocked. Allow it in your system settings, then connect again.",
+                    "device": "heart rate device",
+                    "hint": "Some devices connect to only one thing at a time, so your phone app may disconnect. Insert {variable} into a status line to show it. Avatar parameters use the common HR and isHRBeat names (Pulsoid and many Booth prefabs) as well as VRCOSC's VRCOSC/Heartrate names.",
+                    "save_failed": "Couldn't change the heart rate connection.",
+                    "devices": "Works with standard Bluetooth heart rate devices: chest straps and armbands, Garmin, COROS, Huawei, Amazfit, Xiaomi Smart Band 10 and more. Turn on heart rate broadcast on the device."
+                },
+                "module_off": "Off"
             },
             "follow_party": {
                 "follow_links": "Follow Links",
@@ -3955,6 +3983,7 @@
                     "hide_private_worlds": "Hide Private Worlds",
                     "vr_device_status": "VR Device Status",
                     "battery_percentage": "Battery Percentage",
+                    "show_seconds": "Show Seconds",
                     "wrist_feed_notifications": "Wrist Overlay Notification Filters",
                     "pages": {
                         "label": "Pages",
@@ -4037,7 +4066,7 @@
                     "port_invalid": "Port must be between 1024 and 65535",
                     "status_label": "Status",
                     "token_label": "Access token",
-                    "port_active_connections": "Port {port} · {count} active connections",
+                    "port_active_connections": "Port {port} - {count} active connections",
                     "security_note": "Client configs contain a plain-text token. Only share them with tools or devices you trust.",
                     "rotate_token": "Rotate token",
                     "rotate_token_description": "Old client configs stop working after rotation.",
@@ -4070,7 +4099,7 @@
                     "bind_failed": "Integration API could not listen on port {port}.",
                     "start_failed": "Integration API failed to start automatically: {reason}",
                     "status_label": "Status",
-                    "port_active_connections": "Port {port} · {count} active connections",
+                    "port_active_connections": "Port {port} - {count} active connections",
                     "token": "Access token",
                     "token_description": "The token grants access to the shared information enabled above. Share it only with software you trust.",
                     "token_copied": "Integration API token copied",
@@ -4783,7 +4812,7 @@
                         "delivery_last_success": "Last success",
                         "delivery_last_failure": "Last failure",
                         "delivery_dropped": "Dropped: {count}",
-                        "delivery_record": "{event} · {status} · attempts: {attempts} · {time}",
+                        "delivery_record": "{event} - {status} - attempts: {attempts} - {time}",
                         "delivery_no_status": "No HTTP status",
                         "delivery_never": "Never",
                         "delivery_contract_title": "How delivery works",
@@ -4947,10 +4976,10 @@
                             "open_backup": "Back up data",
                             "status_ready": "Ready to import",
                             "status_account_unverified": "Account cannot be verified",
-                            "status_account_unverified_skipped": "Account cannot be verified · skipped",
+                            "status_account_unverified_skipped": "Account cannot be verified - skipped",
                             "status_account_mismatch": "Belongs to another account",
-                            "status_account_mismatch_skipped": "Belongs to another account · skipped",
-                            "status_live_file": "Being written by VRChat · close the game and try again",
+                            "status_account_mismatch_skipped": "Belongs to another account - skipped",
+                            "status_live_file": "Being written by VRChat - close the game and try again",
                             "status_unreadable": "File cannot be read",
                             "inserted": "Records imported: {count}",
                             "nothing_new": "All records already exist",
@@ -5101,7 +5130,7 @@
                         "legacy_migration": "Migrate VRCX Data",
                         "legacy_migration_description": "Replace the current VRCX-0-Nanashi configuration and database with data from the fixed VRCX data folder.",
                         "legacy_migration_confirm_title": "Replace VRCX-0-Nanashi data with VRCX data?",
-                        "legacy_migration_confirm_description": "This will delete and replace the current VRCX-0-Nanashi settings and local database with the data found at {path}. VRCX-0-Nanashi will restart to complete the migration. The original VRCX data will not be modified.",
+                        "legacy_migration_confirm_description": "This deletes the current VRCX-0-Nanashi settings and local database and replaces them with the data from:\n{path}\n\nVRCX-0-Nanashi will restart to finish the migration. The original VRCX data will not be modified.",
                         "legacy_migration_confirm": "Migrate and Restart",
                         "legacy_migration_not_available": "No supported VRCX database was found.",
                         "legacy_migration_restart_manually": "Migration is ready. Restart VRCX-0-Nanashi to complete it.",
@@ -5283,7 +5312,7 @@
                     "domains": "Domains (one hostname per line)",
                     "githubAvatars": "GitHub avatar-list directory"
                 },
-                "source_status": "{count} cached entries · Last success: {date}",
+                "source_status": "{count} cached entries - Last success: {date}",
                 "never": "Never",
                 "save": "Save safety settings",
                 "refresh_sources": "Refresh saved sources",
@@ -5404,7 +5433,11 @@
                 "game_log_unavailable": "Game log unavailable",
                 "game_log_widget_failed": "Game log widget failed",
                 "instance_widget_failed": "Instance widget failed",
-                "current_players_are_not_available_yet": "Current players are not available yet"
+                "current_players_are_not_available_yet": "Current players are not available yet",
+                "changes_not_saved_after_reset": "Dashboards were reset before this change was saved. Try again.",
+                "dashboard_not_found": "This dashboard no longer exists",
+                "create_produced_invalid_config": "Couldn't create the dashboard because its settings are invalid.",
+                "update_produced_invalid_config": "Couldn't save the dashboard because its settings are invalid."
             },
             "empty": {
                 "no_feed_rows": "No feed entries",
@@ -5442,9 +5475,9 @@
                 "this_removes_the_dashboard_definition_from_the_s": "This dashboard will be permanently deleted."
             },
             "dynamic": {
-                "widget_value": "Widget · {value}",
-                "page_value": "Page · {value}",
-                "existing_value": "Existing · {value}"
+                "widget_value": "Widget - {value}",
+                "page_value": "Page - {value}",
+                "existing_value": "Existing - {value}"
             }
         },
         "player_list": {
@@ -5498,8 +5531,8 @@
                 "summary": "{count} players share friends with you",
                 "circles_prefix": "mostly from the communities of",
                 "circles_suffix": "",
-                "cell_tooltip": "{names} · {count} mutual friends",
-                "cell_tooltip_circle": "{names} · {count} mutual friends · mostly from {circle}'s community",
+                "cell_tooltip": "{names} - {count} mutual friends",
+                "cell_tooltip_circle": "{names} - {count} mutual friends - mostly from {circle}'s community",
                 "requery": "Check again",
                 "show": "Show results",
                 "hide": "Hide"
@@ -5561,8 +5594,6 @@
                 "failed_to_launch_instance": "Failed to launch instance",
                 "failed_to_send_self_invite": "Failed to send self-invite",
                 "failed_to_send_invite": "Failed to send invite",
-                "failed_to_request_invite": "Failed to request invite",
-                "failed_to_send_boop": "Failed to send boop",
                 "failed_to_select_avatar": "Failed to select avatar",
                 "failed_to_create_local_favorite_group": "Failed to create local favorite group",
                 "failed_to_copy_selected_favorites": "Failed to copy selected favorites",
@@ -5585,8 +5616,6 @@
                 "clear_avatar_history": "Clear avatar history?",
                 "send_invite": "Send invite?",
                 "invite": "Invite",
-                "request_invite": "Request invite?",
-                "request_invite_2": "Request Invite",
                 "send": "Send",
                 "delete_value_favorites": "Delete {value} favorites?",
                 "this_action_cannot_be_undone": "This action cannot be undone",
@@ -5628,17 +5657,13 @@
                 "failed_to_unfriend_value": "Failed to unfriend {value}",
                 "failed_to_launch_instance": "Failed to launch instance",
                 "failed_to_send_self_invite": "Failed to send self-invite",
-                "failed_to_send_invite": "Failed to send invite",
-                "failed_to_request_invite": "Failed to request invite",
-                "failed_to_send_boop": "Failed to send boop"
+                "failed_to_send_invite": "Failed to send invite"
             },
             "modal": {
                 "unfriend_user": "Unfriend user?",
                 "unfriend": "Unfriend",
                 "send_invite": "Send invite?",
                 "invite": "Invite",
-                "request_invite": "Request invite?",
-                "request_invite_2": "Request Invite",
                 "send": "Send"
             },
             "dynamic": {
@@ -5650,6 +5675,7 @@
         },
         "notifications": {
             "toast": {
+                "no_current_user_session": "Sign in to see notifications",
                 "failed_to_load_notifications": "Failed to load notifications",
                 "failed_to_mark_notification_as_seen": "Failed to mark notification as seen",
                 "failed_to_delete_notification": "Failed to delete notification",
@@ -5926,7 +5952,7 @@
             },
             "people": {
                 "co_days": "{count} days",
-                "lead_caption": "{days} days · {hours}h",
+                "lead_caption": "{days} days - {hours}h",
                 "fading_title": "Fading out",
                 "fading_caveat": "Less overlap than the period before. Could be schedules, not intent.",
                 "encountered_total": "{count} met in total",
@@ -6421,7 +6447,6 @@
                 "shared_connections_setting_updated": "Shared connections setting updated",
                 "discord_connections_setting_updated": "Discord connections setting updated",
                 "report_sent": "Report sent",
-                "boop_sent": "Boop sent",
                 "profile_details_updated": "Profile details updated",
                 "group_invite_sent": "Group invite sent",
                 "left_group": "Left group",
@@ -6478,9 +6503,6 @@
                 "invite_message_sent": "Invite message sent",
                 "failed_to_send_invite": "Failed to send invite",
                 "invite_request_message_sent": "Invite request message sent",
-                "invite_request_sent": "Invite request sent",
-                "failed_to_request_invite": "Failed to request invite",
-                "failed_to_send_boop": "Failed to send boop",
                 "already_viewing_user": "Already viewing this user",
                 "failed_to_open_discord_profile": "Failed to open Discord profile",
                 "translation_failed": "Translation failed",
@@ -6725,7 +6747,7 @@
                     "tags": "Tags & Restrictions"
                 },
                 "favorite_rate": "{rate}% favorite rate",
-                "capacity_value": "Recommended {recommended} · Max {max}",
+                "capacity_value": "Recommended {recommended} - Max {max}",
                 "video_domains_count": "{count} allowed domains",
                 "attributes": "Other attributes"
             },
@@ -8630,7 +8652,7 @@
         },
         "email_otp": {
             "header": "Two-factor Authentication",
-            "description": "Enter a numeric code that was sent to your email",
+            "description": "Enter the code VRChat sent to your email. VRChat sends this email when you sign in from a new device  -  it's a normal security check.",
             "resend": "Resend Email",
             "verify": "Verify",
             "input_error": "Invalid Code"
@@ -8875,6 +8897,9 @@
             "deleted": "All VRChat cache deleted"
         },
         "gamelog": {
+            "debug_logging_title": "Turn on debug logging",
+            "debug_logging_description": "VRChat debug logging is off. Turn it on in the VRChat quick menu under Settings > Debug > Enable Debug Logging, then rejoin the instance or restart VRChat.",
+            "game_state_update_failed": "Couldn't update the game state",
             "vrchat_must_be_closed": "VRChat needs to be closed before this option can be changed"
         },
         "error": "Error",
@@ -8949,7 +8974,7 @@
         "video_play_title": "Video Play",
         "tracker_title": "Tracker",
         "tracker_disconnected": "disconnected",
-        "tracker_disconnected_battery": "disconnected · last battery {percent}%",
+        "tracker_disconnected_battery": "disconnected - last battery {percent}%",
         "trackers_disconnected": "{count} disconnected",
         "avatar_change": "Changed avatar to {avatar}",
         "blocked_player_joined": "Blocked user has joined",
@@ -9125,7 +9150,7 @@
         "do_not_disturb_until_stopped": "Until I turn it off",
         "do_not_disturb_turn_off": "Turn off Do Not Disturb",
         "game_isolation": "Game Isolation",
-        "game_isolation_active": "Game Isolation is on · Click to turn off",
+        "game_isolation_active": "Game Isolation is on - Click to turn off",
         "do_not_disturb_failed": "Failed to update Do Not Disturb",
         "world_collection_importing": "Importing world collection ({progress}/{total})",
         "game": "Game",
@@ -9184,6 +9209,8 @@
             "toast": {
                 "failed_to_add_favorite": "Failed to add favorite",
                 "failed_to_remove_favorite": "Failed to remove favorite",
+                "move_failed_restored": "Couldn't move it to the new group, so it was put back in its original group.",
+                "move_failed_not_restored": "Couldn't move it to the new group or put it back. It's no longer in your VRChat favorites.",
                 "failed_to_add_local_favorite": "Failed to add local favorite",
                 "failed_to_remove_local_favorite": "Failed to remove local favorite"
             }
@@ -9301,8 +9328,6 @@
                 "failed_to_launch_instance": "Failed to launch instance",
                 "failed_to_send_self_invite": "Failed to send self-invite",
                 "failed_to_send_invite": "Failed to send invite",
-                "failed_to_request_invite": "Failed to request invite",
-                "failed_to_send_boop": "Failed to send boop",
                 "failed_to_update_social_status": "Failed to update social status",
                 "failed_to_update_status_description": "Failed to update status description",
                 "failed_to_update_status": "Failed to update status"
@@ -9310,8 +9335,6 @@
             "modal": {
                 "send_invite": "Send invite?",
                 "invite": "Invite",
-                "request_invite": "Request invite?",
-                "request_invite_2": "Request Invite",
                 "send": "Send",
                 "edit_status_description": "Edit status description"
             }
@@ -9410,7 +9433,7 @@
                 "select_a_group_title": "Select a group",
                 "select_a_group_description": "Choose a group from the list to manage members, bans, invites, and join requests.",
                 "moderator_hint": "You have moderation access in this group",
-                "member_online_count": "{members} members · {online} online"
+                "member_online_count": "{members} members - {online} online"
             }
         }
     },
@@ -9577,7 +9600,7 @@
         "failed": "Could not change the rendering setting. Please try again."
     },
     "mutual_graph_hint": {
-        "build": "No mutual friend graph yet · Build it",
+        "build": "No mutual friend graph yet - Build it",
         "room_scan_running": "Checking mutual friends for this instance. Try again when it finishes."
     },
     "device_login": {

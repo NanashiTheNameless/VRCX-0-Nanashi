@@ -23,16 +23,14 @@ import {
     type NavLayoutEntry
 } from '@/components/layout/navMenuModel';
 import configRepository from '@/repositories/configRepository';
+import { ensureDashboardsLoaded } from '@/services/dashboardService';
 import { toast } from '@/services/toastService';
 import {
     isToolCapabilityAvailable,
     triggerToolByKey
 } from '@/services/toolActionService';
 import { getRecentToolKeys } from '@/services/toolRecentService';
-import {
-    publishToolsQuickAccessUpdated,
-    type ToolDefinition
-} from '@/shared/constants/tools';
+import { type ToolDefinition } from '@/shared/constants/tools';
 import { useDashboardStore } from '@/state/dashboardStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -83,7 +81,6 @@ function useToolsQuickAccessState() {
             const nextKeys = normalizeQuickAccessToolKeys(value);
             configRepository
                 .setString(quickAccessConfigKey, JSON.stringify(nextKeys))
-                .then(() => publishToolsQuickAccessUpdated())
                 .catch(() => {});
             return nextKeys;
         });
@@ -132,9 +129,6 @@ export function useToolsPageState() {
     const { t, i18n } = useTranslation();
     const hostCapabilities = useRuntimeStore((state) => state.hostCapabilities);
     const dashboards = useDashboardStore((state) => state.dashboards);
-    const ensureDashboardsLoaded = useDashboardStore(
-        (state) => state.ensureLoaded
-    );
     const preferencesHydrated = usePreferencesStore(
         (state) => state.preferencesHydrated
     );
@@ -222,7 +216,7 @@ export function useToolsPageState() {
 
     useEffect(() => {
         ensureDashboardsLoaded().catch(() => {});
-    }, [ensureDashboardsLoaded]);
+    }, []);
 
     useEffect(() => {
         if (!preferencesHydrated) {

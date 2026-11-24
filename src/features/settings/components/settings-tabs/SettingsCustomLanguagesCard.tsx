@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { formatKeyboardShortcut } from '@/components/keyboard/KeyboardShortcut';
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { FALLBACK_LOCALE_CODE, getLanguageName } from '@/localization/index';
 import { commands, type CustomLocaleEntry } from '@/platform/tauri/bindings';
 import {
@@ -19,6 +20,7 @@ import {
     type CustomLocaleMeta,
     type UiTranslationProvider
 } from '@/services/customLocaleService';
+import { loadLlmEndpoints } from '@/services/llmEndpointsService';
 import { setAppLanguagePreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { useLlmEndpointsStore } from '@/state/llmEndpointsStore';
@@ -40,7 +42,6 @@ import {
 } from '@/ui/shadcn/select';
 import { Textarea } from '@/ui/shadcn/textarea';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 type ProviderKind = UiTranslationProvider['kind'];
@@ -62,7 +63,6 @@ export function SettingsCustomLanguagesCard() {
         (state) => state.hostCapabilities.platform === 'macos'
     );
     const endpoints = useLlmEndpointsStore((state) => state.endpoints);
-    const loadEndpoints = useLlmEndpointsStore((state) => state.load);
     const activeLocale = useShellStore((state) => state.locale);
     const [locales, setLocales] = useState<CustomLocaleEntry[]>([]);
     const missingByCode = useMemo(
@@ -94,8 +94,8 @@ export function SettingsCustomLanguagesCard() {
     }
 
     useEffect(() => {
-        loadEndpoints().catch(() => {});
-    }, [loadEndpoints]);
+        loadLlmEndpoints().catch(() => {});
+    }, []);
 
     // Load on mount, and pick up the file a background job wrote once it ends.
     useEffect(() => {

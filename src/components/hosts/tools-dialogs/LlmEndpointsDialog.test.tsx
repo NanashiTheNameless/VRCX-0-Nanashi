@@ -58,20 +58,19 @@ vi.mock('@/state/llmEndpointsStore', () => ({
         selector: (state: {
             endpoints: typeof mocks.endpoints;
             loading: boolean;
-            load: typeof mocks.load;
-            upsert: typeof mocks.upsert;
-            deleteEndpoint: typeof mocks.deleteEndpoint;
-            detectModels: typeof mocks.detectModels;
         }) => unknown
     ) =>
         selector({
             endpoints: mocks.endpoints,
-            loading: false,
-            load: mocks.load,
-            upsert: mocks.upsert,
-            deleteEndpoint: mocks.deleteEndpoint,
-            detectModels: mocks.detectModels
+            loading: false
         })
+}));
+
+vi.mock('@/services/llmEndpointsService', () => ({
+    loadLlmEndpoints: mocks.load,
+    upsertLlmEndpoint: mocks.upsert,
+    deleteLlmEndpoint: mocks.deleteEndpoint,
+    detectLlmEndpointModels: mocks.detectModels
 }));
 
 vi.mock('@/ui/shadcn/badge', () => ({
@@ -291,13 +290,13 @@ describe('LlmEndpointsDialog', () => {
         expect(apiKeyInput.value).toBe('sk-existing');
         fireEvent.click(
             screen.getByRole('button', {
-                name: 'view.tools.llm_endpoints.show_key'
+                name: 'common.actions.show_secret'
             })
         );
         expect(apiKeyInput.type).toBe('text');
         fireEvent.click(
             screen.getByRole('button', {
-                name: 'view.tools.llm_endpoints.hide_key'
+                name: 'common.actions.hide_secret'
             })
         );
         expect(apiKeyInput.type).toBe('password');

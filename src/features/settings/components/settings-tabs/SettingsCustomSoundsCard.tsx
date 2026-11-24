@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { commands } from '@/platform/tauri/bindings';
 import type { ActivityTypeDefinition } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
@@ -24,7 +25,6 @@ import {
     type NotificationSounds
 } from '../../notificationSounds';
 import { useDraftAutosave } from '../../useDraftAutosave';
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsSaveStatus } from '../SettingsSaveStatus';
 

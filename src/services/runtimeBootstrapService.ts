@@ -3,7 +3,7 @@ import type { RuntimeNotificationLevel } from '@/platform/tauri/bindings';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 
-import { setI18nLanguage } from './i18nService';
+import i18n, { setI18nLanguage } from './i18nService';
 import { startOverlayBadgeSync } from './overlayBadgeSyncService';
 import { bindRuntimeEvents } from './runtimeEventBridgeService';
 import { initializeReactRuntime } from './startupService';
@@ -77,7 +77,7 @@ function createReactRuntimeStartPromise() {
             if (reactRuntimeConsumerCount > 0) {
                 pushRuntimeNotification({
                     level: 'error',
-                    title: 'Runtime bootstrap failed',
+                    title: i18n.t('common.error.runtime_bootstrap_failed'),
                     error
                 });
             }
@@ -147,7 +147,7 @@ export function startI18nLanguageSync() {
         setI18nLanguage(nextLocale).catch((error: unknown) => {
             pushRuntimeNotification({
                 level: 'warning',
-                title: 'Language sync failed',
+                title: i18n.t('common.error.language_sync_failed'),
                 error
             });
         });

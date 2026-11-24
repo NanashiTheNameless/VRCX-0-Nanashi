@@ -15,7 +15,7 @@ import {
 import { displayDateBoundary } from '@/shared/utils/displayTimeZone';
 import { normalizeString } from '@/shared/utils/string';
 
-import { normalizeUserTablePrefix } from './userSessionRepository';
+import userSessionRepository from './userSessionRepository';
 
 export type { FeedCursor } from '@/domain/feed/readModel';
 
@@ -50,7 +50,7 @@ function normalizeStringList(value: string[]): string[] {
 }
 
 function getUserPrefix(userId: string) {
-    return normalizeUserTablePrefix(userId);
+    return userSessionRepository.normalizeUserTablePrefix(userId);
 }
 
 const ensuredFeedTablePrefixes = new Map<string, Promise<void>>();

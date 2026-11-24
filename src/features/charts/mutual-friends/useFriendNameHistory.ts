@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { getFriendLogHistory } from '@/repositories/friendLogHistoryRepository';
+import friendLogHistoryRepository from '@/repositories/friendLogHistoryRepository';
 
 const EMPTY_NAMES: Readonly<Record<string, string>> = Object.freeze({});
 
@@ -43,7 +43,8 @@ export function useFriendNameHistory(
             return undefined;
         }
         let active = true;
-        getFriendLogHistory(currentUserId)
+        friendLogHistoryRepository
+            .getFriendLogHistory(currentUserId)
             .then((rows) => {
                 if (active) {
                     setNames({

@@ -2,6 +2,7 @@ import { DatabaseIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { cn } from '@/lib/utils';
 import {
     commands,
@@ -31,7 +32,6 @@ import {
 } from '@/ui/shadcn/number-field';
 import { Switch } from '@/ui/shadcn/switch';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 const DEFAULT_PORT = 22500;

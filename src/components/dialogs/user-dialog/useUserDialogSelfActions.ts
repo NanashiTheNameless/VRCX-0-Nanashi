@@ -124,6 +124,7 @@ type UseUserDialogSelfActionsProps = {
     currentEndpoint: string;
     baseProfile: UserDialogProfileRecord | null;
     setBaseProfile: Dispatch<SetStateAction<UserDialogProfileRecord | null>>;
+    actionStatus: string;
     actionStatusRef: MutableRefObject<string>;
     setActionStatus: Dispatch<SetStateAction<string>>;
 };
@@ -140,6 +141,7 @@ export function useUserDialogSelfActions({
     currentEndpoint,
     baseProfile,
     setBaseProfile,
+    actionStatus,
     actionStatusRef,
     setActionStatus
 }: UseUserDialogSelfActionsProps) {
@@ -187,7 +189,7 @@ export function useUserDialogSelfActions({
         useCurrentUserSocialStatusDialog({
             profile: isCurrentUser ? profile : null,
             currentUserSnapshot,
-            busy: actionStatusRef.current !== 'idle',
+            busy: actionStatus !== 'idle',
             onSave: (patch) =>
                 saveCurrentUserPatch(patch, {
                     successMessage: t('dialog.user.success.status_updated'),
@@ -377,12 +379,17 @@ export function useUserDialogSelfActions({
         const nextLanguageKeys = normalizeProfileLanguageKeys(
             profileDetailsDraft.languageKeys
         );
-        const addLanguageKeys = nextLanguageKeys.filter(
-            (key) => !currentLanguageKeys.includes(key)
-        );
-        const removeLanguageKeys = currentLanguageKeys.filter(
-            (key) => !nextLanguageKeys.includes(key)
-        );
+        let keptLanguageCount = 0;
+        while (
+            keptLanguageCount < currentLanguageKeys.length &&
+            keptLanguageCount < nextLanguageKeys.length &&
+            currentLanguageKeys[keptLanguageCount] ===
+                nextLanguageKeys[keptLanguageCount]
+        ) {
+            keptLanguageCount += 1;
+        }
+        const addLanguageKeys = nextLanguageKeys.slice(keptLanguageCount);
+        const removeLanguageKeys = currentLanguageKeys.slice(keptLanguageCount);
         const nextBio = String(profileDetailsDraft.bio || '').slice(0, 512);
         const nextBioLinks = normalizeProfileBioLinks({
             bioLinks: profileDetailsDraft.bioLinks
@@ -441,10 +448,10 @@ export function useUserDialogSelfActions({
                         tags: removeLanguageKeys.map((key) => `language_${key}`)
                     });
             }
-            if (addLanguageKeys.length) {
+            for (const key of addLanguageKeys) {
                 nextUser = await currentUserProfileService.addCurrentUserTags({
                     userId: currentUserId || '',
-                    tags: addLanguageKeys.map((key) => `language_${key}`)
+                    tags: [`language_${key}`]
                 });
             }
             applyCurrentUserSnapshot({ ...nextUser, ...profilePatch });

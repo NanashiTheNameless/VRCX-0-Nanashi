@@ -2,6 +2,7 @@ import { ChevronDownIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { cn } from '@/lib/utils';
 import {
     commands,
@@ -32,7 +33,6 @@ import { Switch } from '@/ui/shadcn/switch';
 import { Textarea } from '@/ui/shadcn/textarea';
 
 import { useDraftAutosave } from '../../useDraftAutosave';
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsSaveStatus } from '../SettingsSaveStatus';
 import { SettingsAvatarBlocks } from './SettingsAvatarBlocks';

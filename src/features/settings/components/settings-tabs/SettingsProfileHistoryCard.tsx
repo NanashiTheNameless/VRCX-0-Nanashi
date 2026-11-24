@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import {
     commands,
     type ProfileHistoryField,
@@ -8,7 +9,6 @@ import {
 } from '@/platform/tauri/bindings';
 import { Switch } from '@/ui/shadcn/switch';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 // Literal ids, so the settings manifest test can find every switch.

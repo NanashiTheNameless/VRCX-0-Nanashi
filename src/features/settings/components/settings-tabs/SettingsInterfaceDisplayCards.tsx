@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import {
     DATE_FORMAT_PRESETS,
     type DateFormatPreset,
@@ -19,7 +20,6 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import type { SettingsPageStateSections } from '../../settingsPageStateSections';
-import { SettingsCard } from '../SettingsCard';
 import { Field, SegmentedPreference } from '../SettingsField';
 import { SettingsInterfaceProfileAppearanceCard } from './SettingsInterfaceProfileAppearanceCard';
 import { SettingsInterfaceUserDialogCard } from './SettingsInterfaceUserDialogCard';

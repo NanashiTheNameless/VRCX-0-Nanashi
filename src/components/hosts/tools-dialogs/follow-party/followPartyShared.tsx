@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
@@ -34,7 +40,9 @@ export function useJsonConfigValue<T>(
 } {
     const { t } = useTranslation();
     const parseRef = useRef(parse);
-    parseRef.current = parse;
+    useLayoutEffect(() => {
+        parseRef.current = parse;
+    });
     const [value, setValue] = useState<T>(() => parse(parseJson(fallbackRaw)));
     const [loading, setLoading] = useState(false);
     const queue = useRef<Promise<void>>(Promise.resolve());

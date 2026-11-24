@@ -20,6 +20,7 @@ import {
     CustomBadgeExportDialog,
     CustomBadgeImportDialog
 } from '@/components/badges/CustomBadgeTransferDialogs';
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
     CUSTOM_BADGE_WARN_COUNT,
@@ -35,7 +36,6 @@ import {
 import { Button } from '@/ui/shadcn/button';
 import { Switch } from '@/ui/shadcn/switch';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 const T = 'view.settings.appearance.user_badges';

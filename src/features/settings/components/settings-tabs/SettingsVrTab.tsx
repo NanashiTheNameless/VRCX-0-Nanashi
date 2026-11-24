@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import type { HostPlatform } from '@/platform/tauri/bindings';
 import type { PreferencesSnapshot } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
@@ -24,7 +25,6 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import { overlayToastOptions } from '../../settingsOptions';
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsVrTabState } from '../useSettingsVrTabState';
@@ -58,6 +58,7 @@ type SettingsVrPrefs = Pick<
     | 'wristOverlayHidePrivateWorlds'
     | 'wristOverlayShowBatteryPercent'
     | 'wristOverlayShowDevices'
+    | 'wristOverlayShowSeconds'
     | 'wristOverlayStartMode'
     | 'xsNotifications'
 >;
@@ -99,6 +100,7 @@ type SettingsVrTabContentProps = {
     onWristOverlayHidePrivateWorldsChange: (checked: boolean) => void;
     onWristOverlayShowBatteryPercentChange: (checked: boolean) => void;
     onWristOverlayShowDevicesChange: (checked: boolean) => void;
+    onWristOverlayShowSecondsChange: (checked: boolean) => void;
     onWristOverlayStartModeChange: (value: WristOverlayStartMode) => void;
     onXsNotificationsChange: (checked: boolean) => void;
 };
@@ -174,6 +176,7 @@ function SettingsVrTabContent({
     onWristOverlayHidePrivateWorldsChange,
     onWristOverlayShowDevicesChange,
     onWristOverlayShowBatteryPercentChange,
+    onWristOverlayShowSecondsChange,
     onOpenWristFeedNotificationsDialog
 }: SettingsVrTabContentProps) {
     const { t } = useTranslation();
@@ -912,6 +915,21 @@ function SettingsVrTabContent({
                     <Switch
                         checked={prefs.wristOverlayShowBatteryPercent}
                         onCheckedChange={onWristOverlayShowBatteryPercentChange}
+                    />
+                </Field>
+
+                <Field
+                    settingId="vr.wrist.show-seconds"
+                    onReset={() =>
+                        onWristOverlayShowSecondsChange(
+                            SETTINGS_DEFAULT_VALUES.wristOverlayShowSeconds
+                        )
+                    }
+                    label={t('view.settings.vr.wrist_overlay.show_seconds')}
+                >
+                    <Switch
+                        checked={prefs.wristOverlayShowSeconds}
+                        onCheckedChange={onWristOverlayShowSecondsChange}
                     />
                 </Field>
 

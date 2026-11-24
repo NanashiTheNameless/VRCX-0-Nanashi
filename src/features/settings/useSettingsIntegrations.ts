@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { RuntimeModelRef } from '@/features/assistant/components/RuntimeModelSelect';
+import type { RuntimeModelRef } from '@/components/llm/RuntimeModelSelect';
+import {
+    getEffectiveReasoningEffort,
+    getModelReasoning,
+    isOpenRouterBaseUrl
+} from '@/lib/llmReasoning';
 import { languageCodes } from '@/localization/index';
 import {
     commands,
@@ -10,6 +15,7 @@ import {
     type LlmEndpointDto
 } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
+import { loadLlmEndpoints } from '@/services/llmEndpointsService';
 import {
     setDiscordBoolPreference,
     setTranslationApiConfigPreference,
@@ -25,11 +31,6 @@ import {
     usePreferencesStore
 } from '@/state/preferencesStore';
 
-import {
-    getEffectiveReasoningEffort,
-    getModelReasoning,
-    isOpenRouterBaseUrl
-} from '../llm/reasoning';
 import { parseWebJson } from './settingsValues';
 
 export type SettingsIntegrationPrefs = {
@@ -222,10 +223,7 @@ export function useSettingsIntegrations({ commit }: SettingsIntegrationsDeps) {
     }
 
     function openTranslationApiDialog() {
-        useLlmEndpointsStore
-            .getState()
-            .load()
-            .catch(() => {});
+        loadLlmEndpoints().catch(() => {});
         setTranslationDefaultModel(undefined);
         loadTranslationDefaultModel().catch(() => {});
         const assignment = translationAssignment({

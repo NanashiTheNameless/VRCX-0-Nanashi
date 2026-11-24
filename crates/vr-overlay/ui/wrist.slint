@@ -22,6 +22,8 @@ export struct WristFeedItem {
     is-favorite: bool,
     show-accent: bool,
     badges: [OverlayBadgeItem],
+    status-color: color,
+    show-status-dot: bool,
 }
 
 export struct WristPlayerItem {
@@ -463,6 +465,20 @@ export component WristPanel inherits Window {
                     }
                 }
 
+                if line.show-status-dot: Rectangle {
+                    horizontal-stretch: 0;
+                    width: 10px * root.content-scale;
+
+                    Rectangle {
+                        x: 0px;
+                        y: (parent.height - self.height) / 2;
+                        width: 10px * root.content-scale;
+                        height: 10px * root.content-scale;
+                        border-radius: 5px * root.content-scale;
+                        background: line.status-color;
+                    }
+                }
+
                 Text {
                     horizontal-stretch: 1;
                     text: line.detail;
@@ -597,6 +613,7 @@ export component WristPanel inherits Window {
             text: root.footer-center;
             font-size: 12px * root.footer-scale;
             horizontal-alignment: center;
+            overflow: elide;
             color: root.muted-color;
         }
 

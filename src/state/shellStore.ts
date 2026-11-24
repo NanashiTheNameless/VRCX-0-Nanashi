@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 
 import {
-    setTaskbarOverlayNotification,
-    setTrayIconNotification
-} from '@/services/shellIntegrationService';
+    STORAGE_KEYS,
+    readStoredText,
+    writeStoredText
+} from '@/lib/browserStorage';
 import { DEFAULT_THEME_COLOR_KEY } from '@/shared/constants/themes';
 import {
     DEFAULT_DATE_FORMAT,
@@ -19,26 +20,26 @@ export type TableDensity = 'standard' | 'compact';
 export type NotificationLayout = 'notification-center' | 'table';
 type WindowDisplayMode = 'normal' | 'sidebar';
 
-const WINDOW_DISPLAY_MODE_STORAGE_KEY = 'VRCX_0_WindowDisplayMode';
+const WINDOW_DISPLAY_MODE_STORAGE_KEY = STORAGE_KEYS.windowDisplayMode;
 
 function loadWindowDisplayMode(): WindowDisplayMode {
-    return localStorage.getItem(WINDOW_DISPLAY_MODE_STORAGE_KEY) === 'sidebar'
+    return readStoredText(WINDOW_DISPLAY_MODE_STORAGE_KEY) === 'sidebar'
         ? 'sidebar'
         : 'normal';
 }
 
 function saveWindowDisplayMode(windowDisplayMode: WindowDisplayMode): void {
-    localStorage.setItem(WINDOW_DISPLAY_MODE_STORAGE_KEY, windowDisplayMode);
+    writeStoredText(WINDOW_DISPLAY_MODE_STORAGE_KEY, windowDisplayMode);
 }
 
-const WINDOW_ALWAYS_ON_TOP_STORAGE_KEY = 'VRCX_0_WindowAlwaysOnTop';
+const WINDOW_ALWAYS_ON_TOP_STORAGE_KEY = STORAGE_KEYS.windowAlwaysOnTop;
 
 function loadWindowAlwaysOnTop(): boolean {
-    return localStorage.getItem(WINDOW_ALWAYS_ON_TOP_STORAGE_KEY) === 'true';
+    return readStoredText(WINDOW_ALWAYS_ON_TOP_STORAGE_KEY) === 'true';
 }
 
 function saveWindowAlwaysOnTop(windowAlwaysOnTop: boolean): void {
-    localStorage.setItem(
+    writeStoredText(
         WINDOW_ALWAYS_ON_TOP_STORAGE_KEY,
         String(windowAlwaysOnTop)
     );
@@ -97,7 +98,8 @@ type ShellStore = {
     setLastSettingsTab(lastSettingsTab: string): void;
     setShortcutHintsVisible(visible: boolean): void;
     setVrcUnseenNotificationCount(unseenCount: number): void;
-    updateTrayIconNotification(force?: boolean): void;
+    setTrayIconNotify(trayIconNotify: boolean): void;
+    setTaskbarIconNotify(taskbarIconNotify: boolean): void;
     notifyMenu(index: string): void;
     removeNotify(index: string): void;
     clearAllNotifications(): void;
@@ -125,7 +127,8 @@ type ShellStoreState = Omit<
     | 'setLastSettingsTab'
     | 'setShortcutHintsVisible'
     | 'setVrcUnseenNotificationCount'
-    | 'updateTrayIconNotification'
+    | 'setTrayIconNotify'
+    | 'setTaskbarIconNotify'
     | 'notifyMenu'
     | 'removeNotify'
     | 'clearAllNotifications'
@@ -190,21 +193,6 @@ function isCurrentMenuRoute(index: string): boolean {
     return Boolean(path && getCurrentHashRoutePath() === path);
 }
 
-function notificationDotActive(state: ShellStore): boolean {
-    const hasUnreadVrcNotifications = state.vrcUnseenNotificationCount > 0;
-    if (state.notificationLayout === 'notification-center') {
-        return Boolean(
-            hasUnreadVrcNotifications ||
-            state.notifiedMenus.includes('friend-log')
-        );
-    }
-    return Boolean(
-        hasUnreadVrcNotifications ||
-        state.notifiedMenus.includes('notification') ||
-        state.notifiedMenus.includes('friend-log')
-    );
-}
-
 export const useShellStore = create<ShellStore>((set, get) => ({
     ...initialState,
     setSidebarOpen(sidebarOpen) {
@@ -236,7 +224,6 @@ export const useShellStore = create<ShellStore>((set, get) => ({
     },
     setNotificationLayout(notificationLayout) {
         set({ notificationLayout });
-        get().updateTrayIconNotification(true);
     },
     setWindowDisplayMode(windowDisplayMode, remember = true) {
         if (remember) {
@@ -250,11 +237,9 @@ export const useShellStore = create<ShellStore>((set, get) => ({
     },
     setNotificationIconDot(notificationIconDot) {
         set({ notificationIconDot });
-        get().updateTrayIconNotification(true);
     },
     setTaskbarIconDot(taskbarIconDot) {
         set({ taskbarIconDot });
-        get().updateTrayIconNotification(true);
     },
     setAppearancePreferences({ hideNicknames } = {}) {
         set((state) => ({
@@ -283,22 +268,12 @@ export const useShellStore = create<ShellStore>((set, get) => ({
     },
     setVrcUnseenNotificationCount(unseenCount) {
         set({ vrcUnseenNotificationCount: unseenCount });
-        get().updateTrayIconNotification();
     },
-    updateTrayIconNotification(force = false) {
-        const active = notificationDotActive(get());
-        const nextTrayIconNotify = get().notificationIconDot && active;
-        const nextTaskbarIconNotify = get().taskbarIconDot && active;
-        if (force || get().trayIconNotify !== nextTrayIconNotify) {
-            set({ trayIconNotify: nextTrayIconNotify });
-            setTrayIconNotification(nextTrayIconNotify).catch(() => {});
-        }
-        if (force || get().taskbarIconNotify !== nextTaskbarIconNotify) {
-            set({ taskbarIconNotify: nextTaskbarIconNotify });
-            setTaskbarOverlayNotification(nextTaskbarIconNotify).catch(
-                () => {}
-            );
-        }
+    setTrayIconNotify(trayIconNotify) {
+        set({ trayIconNotify });
+    },
+    setTaskbarIconNotify(taskbarIconNotify) {
+        set({ taskbarIconNotify });
     },
     notifyMenu(index) {
         if (!index) {
@@ -311,7 +286,6 @@ export const useShellStore = create<ShellStore>((set, get) => ({
                       notifiedMenus: [...state.notifiedMenus, index]
                   }
         );
-        get().updateTrayIconNotification();
     },
     removeNotify(index) {
         if (!index || !get().notifiedMenus.includes(index)) {
@@ -320,10 +294,8 @@ export const useShellStore = create<ShellStore>((set, get) => ({
         set((state) => ({
             notifiedMenus: state.notifiedMenus.filter((item) => item !== index)
         }));
-        get().updateTrayIconNotification();
     },
     clearAllNotifications() {
         set({ notifiedMenus: [] });
-        get().updateTrayIconNotification();
     }
 }));

@@ -2,6 +2,7 @@ import { RefreshCwIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import {
     commands,
     type DeepLinkSchemeSettings,
@@ -18,7 +19,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import { DeepLinkRegistrationField } from '../DeepLinkRegistrationField';
-import { SettingsCard } from '../SettingsCard';
 import { Field, JsonTreeView, SettingsSectionHeading } from '../SettingsField';
 import type {
     SettingsAdvancedAction,

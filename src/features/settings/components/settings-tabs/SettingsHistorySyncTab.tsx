@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { commands } from '@/platform/tauri/bindings';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Badge } from '@/ui/shadcn/badge';
@@ -14,7 +15,6 @@ import {
 } from '@/ui/shadcn/select';
 import { Switch } from '@/ui/shadcn/switch';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { SettingsHistorySyncPanel } from './SettingsHistorySyncPanel';

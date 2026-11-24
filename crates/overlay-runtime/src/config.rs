@@ -39,6 +39,7 @@ pub const VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY: &str = "wristOverlayOffsetSideCm
 pub const VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY: &str = "wristOverlayOffsetUpCm";
 pub const VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY: &str = "wristOverlayOffsetOutCm";
 pub const VR_OVERLAY_TILT_DEGREES_CONFIG_KEY: &str = "wristOverlayTiltDegrees";
+pub const VR_OVERLAY_SHOW_SECONDS_CONFIG_KEY: &str = "wristOverlayShowSeconds";
 pub const HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY: &str = "hmdNotificationsEnabled";
 pub const HMD_NOTIFICATION_START_MODE_CONFIG_KEY: &str = "hmdNotificationStartMode";
 pub const HMD_NOTIFICATION_TIMEOUT_CONFIG_KEY: &str = "hmdNotificationTimeout";
@@ -171,6 +172,7 @@ pub(super) struct VrOverlayRuntimeConfig {
     pub(crate) render: WristOverlayRenderOptions,
     pub(crate) locale: OverlayLocale,
     pub(crate) dt_hour12: bool,
+    pub(crate) wrist_show_seconds: bool,
     pub(crate) show_instance_id_in_location: bool,
     /// Fork: customizable wrist pages (Settings > VR).
     pub(crate) wrist_pages: WristPageOrder,
@@ -196,6 +198,7 @@ impl Default for VrOverlayRuntimeConfig {
             render: WristOverlayRenderOptions::default(),
             locale: OverlayLocale::default(),
             dt_hour12: true,
+            wrist_show_seconds: false,
             show_instance_id_in_location: false,
             wrist_pages: WristPageOrder::default(),
             wrist_players_sort: WristPlayersSort::Name,
@@ -458,6 +461,9 @@ pub(super) fn load_runtime_config(
         },
         locale,
         dt_hour12,
+        wrist_show_seconds: config
+            .get_bool(VR_OVERLAY_SHOW_SECONDS_CONFIG_KEY, false)
+            .unwrap_or(false),
         show_instance_id_in_location,
         wrist_pages,
         wrist_players_sort,

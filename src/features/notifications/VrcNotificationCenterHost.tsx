@@ -17,6 +17,10 @@ import { preserveAppTitleBarOnOpenChange } from '@/lib/overlayTitlebar';
 import { cn } from '@/lib/utils';
 import { openWorldDialog } from '@/services/dialogService';
 import { toast } from '@/services/toastService';
+import {
+    refreshVrcNotificationsForCurrentUser,
+    setVrcNotificationCenterOpen
+} from '@/services/vrcNotificationService';
 import { useShellStore } from '@/state/shellStore';
 import {
     selectCanMarkAllSeen,
@@ -34,6 +38,7 @@ import {
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
+import { useFinishingProgress } from './useFinishingProgress';
 import { useNotificationRuntime } from './useNotificationRuntime';
 
 type InviteResponseSlotPayload = {
@@ -68,17 +73,15 @@ export function VrcNotificationCenterHost() {
         (state) => state.markAllSeenProgress?.total ?? 0
     );
     const isMarkingAllSeen = markAllSeenDone !== null;
+    const markAllSeenBar = useFinishingProgress(
+        markAllSeenDone,
+        markAllSeenTotal
+    );
     const markAllSeenLabel = isMarkingAllSeen
         ? t('side_panel.notification_center.marking_all_read')
         : t('side_panel.notification_center.mark_all_read');
     const loadStatus = useVrcNotificationStore((state) => state.loadStatus);
     const detail = useVrcNotificationStore((state) => state.detail);
-    const setCenterOpen = useVrcNotificationStore(
-        (state) => state.setCenterOpen
-    );
-    const refreshForCurrentUser = useVrcNotificationStore(
-        (state) => state.refreshForCurrentUser
-    );
     const [inviteResponseRequest, setInviteResponseRequest] =
         useState<NotificationDialogRequest>(null);
     const [boopReplyRequest, setBoopReplyRequest] =
@@ -100,7 +103,7 @@ export function VrcNotificationCenterHost() {
         currentInviteLocation,
         currentUserId: currentUserId ?? undefined,
         notificationTypeLabel,
-        reload: refreshForCurrentUser,
+        reload: refreshVrcNotificationsForCurrentUser,
         setBoopReplyRequest,
         setInviteResponseRequest
     });
@@ -114,7 +117,7 @@ export function VrcNotificationCenterHost() {
             setInviteResponseRequest(null);
             setBoopReplyRequest(null);
         }
-        setCenterOpen(open);
+        setVrcNotificationCenterOpen(open);
     }
 
     function joinQueueReady(notification: NotificationRow) {
@@ -215,7 +218,7 @@ export function VrcNotificationCenterHost() {
                                                     loadStatus === 'running'
                                                 }
                                                 onClick={() => {
-                                                    refreshForCurrentUser().catch(
+                                                    refreshVrcNotificationsForCurrentUser().catch(
                                                         (error: unknown) => {
                                                             toast.add({
                                                                 type: 'error',
@@ -268,16 +271,24 @@ export function VrcNotificationCenterHost() {
                                 )}
                             </div>
                         ) : null}
-                        {isMarkingAllSeen ? (
+                        {markAllSeenBar.isVisible ? (
                             <div
                                 role="progressbar"
                                 aria-label={markAllSeenLabel}
                                 aria-valuemin={0}
-                                aria-valuemax={markAllSeenTotal}
-                                aria-valuenow={markAllSeenDone}
-                                className="bg-primary absolute -bottom-px left-0 h-0.5 transition-[width] duration-300"
+                                aria-valuemax={100}
+                                aria-valuenow={Math.round(
+                                    markAllSeenBar.percent
+                                )}
+                                className={cn(
+                                    'bg-primary absolute -bottom-px left-0 h-0.5 transition-[width,opacity] duration-300',
+                                    markAllSeenBar.isFinishing && 'opacity-0'
+                                )}
                                 style={{
-                                    width: `${markAllSeenTotal ? (markAllSeenDone / markAllSeenTotal) * 100 : 0}%`
+                                    width: `${markAllSeenBar.percent}%`,
+                                    transitionDelay: markAllSeenBar.isFinishing
+                                        ? '0ms, 300ms'
+                                        : undefined
                                 }}
                             />
                         ) : null}

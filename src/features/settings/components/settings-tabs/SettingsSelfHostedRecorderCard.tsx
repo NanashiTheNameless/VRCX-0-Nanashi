@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { resolveOfflineRecordHealth } from '@/services/offlineRecordService';
 import { useOfflineRecordStore } from '@/state/offlineRecordStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 type SettingsSelfHostedRecorderCardProps = {

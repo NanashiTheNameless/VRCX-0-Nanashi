@@ -26,7 +26,6 @@ function createInput(
         addAvatarProvider: callback,
         applyAvatarProviderConfig: callback,
         avatarProviderConfig,
-        avatarProviderConfigRef: { current: avatarProviderConfig },
         avatarProviderDialogOpen: false,
         configTreeData: {},
         commit: callback,

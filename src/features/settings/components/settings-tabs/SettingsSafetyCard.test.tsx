@@ -45,7 +45,7 @@ vi.mock('@/platform/tauri/bindings', () => ({
 vi.mock('@/state/modalStore', () => ({
     useModalStore: { getState: () => ({ confirm: mocks.confirm }) }
 }));
-vi.mock('../SettingsCard', () => ({
+vi.mock('@/components/layout/SettingsCard', () => ({
     SettingsCard: ({ children }: PropsWithChildren) => (
         <section>{children}</section>
     )

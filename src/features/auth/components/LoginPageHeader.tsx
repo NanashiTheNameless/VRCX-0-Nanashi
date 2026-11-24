@@ -1,3 +1,6 @@
+import { GlobeIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
 import { getLanguageName } from '@/localization/index';
 import { useLanguageCodes } from '@/localization/useLanguageCodes';
 import {
@@ -18,11 +21,17 @@ export function LoginPageHeader({
     locale,
     onLanguageChange
 }: LoginPageHeaderProps) {
+    const { t } = useTranslation();
     const languageCodes = useLanguageCodes();
     return (
         <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 truncate text-lg font-semibold">
-                VRCX-0-Nanashi
+            <div className="flex min-w-0 flex-col gap-0.5">
+                <div className="truncate text-lg font-semibold">
+                    VRCX-0-Nanashi
+                </div>
+                <div className="text-muted-foreground text-xs">
+                    {t('view.login.tagline')}
+                </div>
             </div>
             {languageCodes.length > 1 ? (
                 <Select
@@ -33,7 +42,11 @@ export function LoginPageHeader({
                         }
                     }}
                 >
-                    <SelectTrigger size="sm" className="w-36">
+                    <SelectTrigger
+                        size="sm"
+                        className="text-muted-foreground w-auto border-transparent bg-transparent shadow-none"
+                    >
+                        <GlobeIcon />
                         <SelectValue>
                             {getLanguageName(locale || 'en')}
                         </SelectValue>

@@ -28,7 +28,6 @@ export const ConfigKeys = defineConfigKeys({
     savedCredentials: { type: 'string', default: '{}' },
 
     // ── Sidebar ──────────────────────────────────────
-    isFriendsGroupMe: { type: 'bool', default: true },
     isFriendsGroupFavorites: { type: 'bool', default: true },
     isFriendsGroupOnline: { type: 'bool', default: true },
     isFriendsGroupActive: { type: 'bool', default: false },
@@ -46,7 +45,6 @@ export const ConfigKeys = defineConfigKeys({
     sidebarSortMethod3: { type: 'string', default: '' },
     sidebarFavoriteGroupOrder: { type: 'string', default: null },
     sidebarTabLayout: { type: 'string', default: null },
-    sidebarTabDisplayMode: { type: 'string', default: 'auto' },
 
     // ── Nav ──────────────────────────────────────────
     navIsCollapsed: { type: 'bool', default: false },
@@ -225,6 +223,7 @@ export const ConfigKeys = defineConfigKeys({
     wristOverlayPlayersSort: { type: 'string', default: 'name' },
     wristOverlayTimeoutSeconds: { type: 'int', default: 15 },
     wristOverlaySwitchCooldownMs: { type: 'int', default: 1000 },
+    wristOverlayShowSeconds: { type: 'bool', default: false },
 
     // ── Settings - VR Background ─────────────────────
     // ── Auto State Change ────────────────────────────
@@ -259,13 +258,9 @@ export const ConfigKeys = defineConfigKeys({
     feedColumnsDensity: { type: 'string', default: 'compact' },
     feedTimeDisplayMode: { type: 'string', default: 'relative' },
     hidePrivateFromFeed: { type: 'bool', default: false },
-    hideDevicesFromFeed: { type: 'bool', default: false },
-    hideUptimeFromFeed: { type: 'bool', default: false },
     friendLogNotificationDot: { type: 'bool', default: true },
     hideUnfriends: { type: 'bool', default: false },
     profileBioScanEnabled: { type: 'bool', default: false },
-    pcUptimeOnFeed: { type: 'bool', default: false },
-    minimalFeed: { type: 'bool', default: false },
     recentActionCooldownEnabled: { type: 'bool', default: false },
     recentActionCooldownMinutes: { type: 'int', default: 60 },
 
@@ -297,8 +292,6 @@ export const ConfigKeys = defineConfigKeys({
     MyAvatarsCardScale: { type: 'string', default: null },
     MyAvatarsCardSpacing: { type: 'string', default: null },
     UserDialogAvatarSort: { type: 'string', default: 'name' },
-    FriendLocationCardScale: { type: 'string', default: '1' },
-    FriendLocationCardSpacing: { type: 'string', default: '1' },
     FriendLocationDensity: { type: 'string', default: 'compact' },
     FriendLocationShowFavoritesInOnline: { type: 'bool', default: null },
     FriendLocationShowSameInstance: { type: 'bool', default: null },

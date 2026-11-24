@@ -288,6 +288,10 @@ fn syncable_app_setting(key: &str) -> bool {
     {
         return false;
     }
+    // The heart rate device is paired over Bluetooth with this PC only.
+    if name.starts_with("heartrate") {
+        return false;
+    }
     // Keys are stored in lower case, so an identifier is told apart by how the
     // name ends; a plain "id" fragment also caught "hide" and "sidebar".
     if ["id", "ids", "idsbyuser"]
@@ -1933,6 +1937,7 @@ mod tests {
             "config:vrcx_lastGameOfflineAt",
             "config:vrcx_desktopWidgetBounds",
             "config:vrcx_0_legacyOwnershipDecided",
+            "config:vrcx_heartRateConfig",
         ] {
             assert!(!syncable_app_setting(key), "{key}");
         }

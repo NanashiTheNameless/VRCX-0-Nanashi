@@ -4,7 +4,8 @@ import {
     type ScreenshotShareFacts,
     type ScreenshotShareFields,
     type ScreenshotShareRecord,
-    type ScreenshotShareTarget
+    type ScreenshotShareTarget,
+    type ScreenshotShareTargetInput
 } from '@/platform/tauri/bindings';
 import i18n from '@/services/i18nService';
 import { toast } from '@/services/toastService';
@@ -20,6 +21,27 @@ import {
 const PROGRESS_TOAST_ID = 'screenshot-share-progress';
 const PROGRESS_TOAST_DELAY_MS = 400;
 const PROGRESS_POLL_INTERVAL_MS = 150;
+
+export async function loadScreenshotShareTargets(): Promise<
+    ScreenshotShareTarget[]
+> {
+    const targets = await commands.appGetScreenshotShareTargets();
+    useScreenshotShareStore.getState().setLoadedTargets(targets);
+    return targets;
+}
+
+export async function saveScreenshotShareTarget(
+    input: ScreenshotShareTargetInput
+): Promise<ScreenshotShareTarget> {
+    const saved = await commands.appSaveScreenshotShareTarget(input);
+    useScreenshotShareStore.getState().upsertTarget(saved);
+    return saved;
+}
+
+export async function deleteScreenshotShareTarget(id: string): Promise<void> {
+    await commands.appDeleteScreenshotShareTarget(id);
+    useScreenshotShareStore.getState().removeTarget(id);
+}
 
 export function screenshotShareText(): ScreenshotShareText {
     return {
@@ -81,17 +103,27 @@ function startProgressToast(target: ScreenshotShareTarget): () => void {
             )
         });
     };
+    let failed = false;
+    const stopPolling = (error: unknown) => {
+        if (failed) {
+            return;
+        }
+        failed = true;
+        globalThis.clearInterval(poll);
+        globalThis.clearTimeout(open);
+        console.warn('Failed to read screenshot share progress:', error);
+    };
     const poll = globalThis.setInterval(() => {
-        void commands.appGetScreenshotShareProgress().then((progress) => {
+        commands.appGetScreenshotShareProgress().then((progress) => {
             if (shown && progress.running) {
                 render(progress.processedFiles, progress.totalFiles);
             }
-        });
+        }, stopPolling);
     }, PROGRESS_POLL_INTERVAL_MS);
     const open = globalThis.setTimeout(() => {
-        void commands.appGetScreenshotShareProgress().then((progress) => {
+        commands.appGetScreenshotShareProgress().then((progress) => {
             render(progress.processedFiles, progress.totalFiles);
-        });
+        }, stopPolling);
     }, PROGRESS_TOAST_DELAY_MS);
     return () => {
         stopped = true;

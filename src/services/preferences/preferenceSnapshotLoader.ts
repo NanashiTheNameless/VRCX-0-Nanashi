@@ -53,6 +53,11 @@ import {
 import { POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY } from '../changelogService';
 import { configureRecentActionCooldown } from '../recentActionService';
 import {
+    setShellNotificationIconDot,
+    setShellNotificationLayout,
+    setShellTaskbarIconDot
+} from '../shellNotificationDotService';
+import {
     normalizeAppCjkFontPack,
     normalizeAppFontFamily
 } from '../themeService';
@@ -206,6 +211,7 @@ export async function loadPreferenceSnapshot() {
         wristOverlayShowDevices,
         wristOverlayShowBatteryPercent,
         wristOverlayTimeoutSeconds,
+        wristOverlayShowSeconds,
         relaunchVRChatAfterCrash,
         vrcQuitFix,
         focusVrchatOnJoin,
@@ -383,6 +389,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('wristOverlayShowDevices', true),
         configRepository.getBool('wristOverlayShowBatteryPercent', false),
         configRepository.getInt('wristOverlayTimeoutSeconds', 15),
+        configRepository.getBool('wristOverlayShowSeconds', false),
         configRepository.getBool('relaunchVRChatAfterCrash', false),
         configRepository.getBool('vrcQuitFix', true),
         configRepository.getBool('focusVrchatOnJoin', false),
@@ -464,15 +471,11 @@ export async function loadPreferenceSnapshot() {
     useShellStore.getState().setSidebarOpen(!navIsCollapsed);
     useShellStore.getState().setNavWidth(navPanelWidth);
     useShellStore.getState().setRightSidebarOpen(rightSidebarOpen);
-    useShellStore
-        .getState()
-        .setNotificationLayout(
-            notificationLayout === 'table'
-                ? 'table'
-                : DEFAULT_NOTIFICATION_LAYOUT
-        );
-    useShellStore.getState().setNotificationIconDot(notificationIconDot);
-    useShellStore.getState().setTaskbarIconDot(taskbarIconDot);
+    setShellNotificationLayout(
+        notificationLayout === 'table' ? 'table' : DEFAULT_NOTIFICATION_LAYOUT
+    );
+    setShellNotificationIconDot(notificationIconDot);
+    setShellTaskbarIconDot(taskbarIconDot);
     useShellStore.getState().setAppearancePreferences({ hideNicknames });
     const resolvedTableDensity = normalizeTableDensity(
         tableDensity || (compactTableMode ? 'compact' : 'standard')
@@ -651,6 +654,7 @@ export async function loadPreferenceSnapshot() {
             wristOverlayTimeoutSeconds,
             { min: 5, max: 255, fallback: 15 }
         ),
+        wristOverlayShowSeconds: Boolean(wristOverlayShowSeconds),
         relaunchVRChatAfterCrash: Boolean(relaunchVRChatAfterCrash),
         vrcQuitFix: Boolean(vrcQuitFix),
         focusVrchatOnJoin: Boolean(focusVrchatOnJoin),

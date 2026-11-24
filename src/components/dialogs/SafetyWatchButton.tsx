@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { commands } from '@/platform/tauri/bindings';
@@ -18,7 +18,9 @@ export function SafetyWatchButton({
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const identity = `${kind}:${id}`;
     const identityRef = useRef(identity);
-    identityRef.current = identity;
+    useLayoutEffect(() => {
+        identityRef.current = identity;
+    });
     const [busy, setBusy] = useState(false);
     useEffect(() => {
         let active = true;

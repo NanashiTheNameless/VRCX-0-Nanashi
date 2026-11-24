@@ -2,6 +2,7 @@ import { RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SettingsCard } from '@/components/layout/SettingsCard';
 import { cn } from '@/lib/utils';
 import { commands, type IpcStatus } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
@@ -11,7 +12,6 @@ import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
 import { Switch } from '@/ui/shadcn/switch';
 
-import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
 const STATUS_POLL_MS = 5000;

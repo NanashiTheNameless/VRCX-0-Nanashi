@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
-import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
-
 import {
     canDeleteGameLogRow,
     collectGameLogSessionFriends,
@@ -18,12 +15,14 @@ import {
     resolveGameLogWorldId,
     resolveGameLogWorldTarget,
     shouldLinkGameLogPrimaryDetailToWorld
-} from './gameLogRows';
+} from '@/components/game-log/gameLogRows';
 import type {
     GameLogSession,
     GameLogSessionEvent,
     GameLogSessionMember
-} from './gameLogTypes';
+} from '@/components/game-log/gameLogTypes';
+import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 function liveSession(
     id: number,

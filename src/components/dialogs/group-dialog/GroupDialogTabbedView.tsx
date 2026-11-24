@@ -6,7 +6,7 @@ import { shallow } from 'zustand/shallow';
 import {
     getEventGroupId,
     getEventId
-} from '@/components/hosts/tools-dialogs/toolsDialogUtils';
+} from '@/components/group-event/groupEventFormat';
 import type { LoadStatus } from '@/domain/shared/types';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useStableCommands } from '@/lib/useStableCommands';
@@ -264,29 +264,6 @@ export function GroupDialogTabbedView({
         resetForTarget();
     }, [currentEndpoint, group.id]);
 
-    const syncGalleryContext = useEffectEvent(() => {
-        loadContextRef.current = {
-            endpoint: currentEndpoint,
-            groupId: group.id,
-            gallerySignature
-        };
-
-        setRemoteData((current) => ({ ...current, photos: [] }));
-        setRemoteStatus((current) => {
-            if (!current.photos) {
-                return current;
-            }
-            return { ...current, photos: '' };
-        });
-        if (activeTab === 'photos' && gallerySignature) {
-            loadTab('photos', { force: true });
-        }
-    });
-
-    useEffect(() => {
-        syncGalleryContext();
-    }, [currentEndpoint, gallerySignature, group.id]);
-
     function isCurrentLoadContext(context: GroupLoadContext) {
         return (
             loadContextRef.current.endpoint === context.endpoint &&
@@ -380,6 +357,29 @@ export function GroupDialogTabbedView({
             }));
         }
     }
+
+    const syncGalleryContext = useEffectEvent(() => {
+        loadContextRef.current = {
+            endpoint: currentEndpoint,
+            groupId: group.id,
+            gallerySignature
+        };
+
+        setRemoteData((current) => ({ ...current, photos: [] }));
+        setRemoteStatus((current) => {
+            if (!current.photos) {
+                return current;
+            }
+            return { ...current, photos: '' };
+        });
+        if (activeTab === 'photos' && gallerySignature) {
+            loadTab('photos', { force: true });
+        }
+    });
+
+    useEffect(() => {
+        syncGalleryContext();
+    }, [currentEndpoint, gallerySignature, group.id]);
 
     async function loadGroupEvents({
         force = false

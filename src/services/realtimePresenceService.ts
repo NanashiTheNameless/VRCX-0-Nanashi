@@ -12,7 +12,6 @@ import { isRecord } from '@/shared/utils/record';
 import { useFeedLiveStore } from '@/state/feedLiveStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
-import { useShellStore } from '@/state/shellStore';
 import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 
 import { recordCurrentUserSnapshot } from './domainIngestionService';
@@ -22,6 +21,16 @@ import {
     queueRealtimeFriendRosterUpdate,
     queueRealtimeUserFactsUpdate
 } from './realtimeRosterUpdateQueue';
+import {
+    notifyShellMenu,
+    removeShellMenuNotify
+} from './shellNotificationDotService';
+import {
+    expireVrcNotifications,
+    markVrcNotificationsSeen,
+    patchVrcNotification,
+    upsertVrcNotification
+} from './vrcNotificationService';
 
 type ProjectionRecord = Record<string, unknown>;
 type RuntimeState = ReturnType<typeof useRuntimeStore.getState>;
@@ -126,7 +135,7 @@ function handleRealtimeFeedProjection(payload: RealtimeFeedProjectionPayload) {
 
 function clearNotificationMenuIfNoUnseen() {
     if (useVrcNotificationStore.getState().unseenCount === 0) {
-        useShellStore.getState().removeNotify('notification');
+        removeShellMenuNotify('notification');
     }
 }
 
@@ -134,7 +143,7 @@ function notifyNotificationMenu(notification: ProjectionRecord) {
     if (notification.version === 2 && notification.seen !== false) {
         return;
     }
-    useShellStore.getState().notifyMenu('notification');
+    notifyShellMenu('notification');
 }
 
 function parseStringArray(value: unknown): string[] {
@@ -211,10 +220,10 @@ async function handleRealtimeNotificationProjection(
     const store = useVrcNotificationStore.getState();
 
     if (payload.expiredIds.length) {
-        store.expireNotifications(payload.expiredIds);
+        expireVrcNotifications(payload.expiredIds);
     }
     if (payload.seenIds.length) {
-        store.markNotificationsSeen(payload.seenIds);
+        markVrcNotificationsSeen(payload.seenIds);
     }
 
     for (const upsert of payload.upserts) {
@@ -236,7 +245,7 @@ async function handleRealtimeNotificationProjection(
                 ...notification
             };
         }
-        store.upsertNotification(notification);
+        upsertVrcNotification(notification);
         const mergedNotification =
             useVrcNotificationStore
                 .getState()
@@ -259,9 +268,7 @@ function handleRealtimeEntryCorrection(
         return;
     }
     if (payload.stream === 'notification') {
-        useVrcNotificationStore
-            .getState()
-            .patchNotification(id, payload.fields);
+        patchVrcNotification(id, payload.fields);
     }
 }
 
@@ -302,9 +309,9 @@ async function handleRealtimeInstanceClosedProjection(
     if (!notification.id) {
         return;
     }
-    useVrcNotificationStore.getState().upsertNotification(notification);
+    upsertVrcNotification(notification);
     if (await shouldNotifyInstanceClosed()) {
-        useShellStore.getState().notifyMenu('notification');
+        notifyShellMenu('notification');
     }
 }
 

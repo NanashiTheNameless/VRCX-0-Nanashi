@@ -8,7 +8,7 @@ use slint::{
 
 use crate::{
     Color, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine, FeedRelation,
-    FeedSeverity, OverlaySize, PlayerCell, RgbaFrame, WristSurfaceModel,
+    FeedSeverity, FeedStatusDot, OverlaySize, PlayerCell, RgbaFrame, WristSurfaceModel,
 };
 
 use super::platform::{
@@ -33,6 +33,10 @@ const WRIST_WARNING: Color = Color::rgba(251, 191, 36, 255);
 const WRIST_FEED_ONLINE: Color = Color::rgba(46, 211, 25, 255);
 const WRIST_FEED_LOCATION: Color = Color::rgba(14, 165, 233, 255);
 const WRIST_FEED_OFFLINE: Color = Color::rgba(148, 163, 184, 255);
+const WRIST_STATUS_ACTIVE: Color = Color::rgba(46, 211, 25, 255);
+const WRIST_STATUS_JOIN_ME: Color = Color::rgba(0, 184, 255, 255);
+const WRIST_STATUS_ASK_ME: Color = Color::rgba(233, 124, 3, 255);
+const WRIST_STATUS_BUSY: Color = Color::rgba(200, 9, 40, 255);
 
 /// Players / Notes grid: a new column starts every this many players, and a
 /// column is never narrower than `MIN_PLAYER_COLUMN_PX` at full text size.
@@ -513,6 +517,17 @@ pub(super) fn wrist_feed_item(row: &FeedLine, dark_background: bool) -> WristFee
         is_favorite: row.relation == FeedRelation::Favorite,
         show_accent,
         badges: badge_items(if has_actor { &row.badges } else { &[] }),
+        status_color: to_slint_color(row.status_dot.map_or(WRIST_TEXT, wrist_feed_status_color)),
+        show_status_dot: row.status_dot.is_some(),
+    }
+}
+
+fn wrist_feed_status_color(status: FeedStatusDot) -> Color {
+    match status {
+        FeedStatusDot::Active => WRIST_STATUS_ACTIVE,
+        FeedStatusDot::JoinMe => WRIST_STATUS_JOIN_ME,
+        FeedStatusDot::AskMe => WRIST_STATUS_ASK_ME,
+        FeedStatusDot::Busy => WRIST_STATUS_BUSY,
     }
 }
 

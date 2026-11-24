@@ -112,7 +112,9 @@ with chatbox animations, per-avatar profiles and a modular OSC system. Tools > C
 shows this recommendation at the top, with a **Get VRCOSC** button that opens its GitHub page.
 
 The built-in Chatbox shows information in VRChat's in-game chatbox over OSC, or sends
-messages you type.
+messages you type. The page has two columns: the status pages on one side, and the message
+box, AFK and heart rate modules on the other. Each module can be collapsed, and a collapsed
+module shows whether it is on.
 
 - **Status pages**: build one or more pages of lines from text and values: the time, what you
   are playing (track, title, artist, with a maximum length), how long you have been playing,
@@ -126,8 +128,17 @@ messages you type.
 - **AFK**: switch to an AFK text, optionally showing how long you have been away, by hand or
   automatically when you take off your headset (needs the wrist overlay or HMD notifications
   on).
-- The chatbox pauses while VRChat is not running or game isolation is on. **Address** and
-  **Port** set where OSC messages go.
+- **Heart rate**: **Connect** pairs a standard Bluetooth heart rate device (chest straps and
+  armbands, Garmin, COROS, Huawei, Amazfit, Xiaomi Smart Band 10 and more; turn on heart rate
+  broadcast on the device). The card shows the device and the current reading. Insert the
+  `{heartrate}` value into a status line to show it in the chatbox. While connected, the
+  reading is also sent as avatar parameters: the common `HR` and `isHRBeat` names (Pulsoid
+  and many Booth prefabs) and VRCOSC's `VRCOSC/Heartrate/...` names. Some devices connect to
+  only one thing at a time, so a phone app may disconnect. The paired device belongs to this
+  PC and is never part of Settings Sync. On macOS the system asks for Bluetooth access the
+  first time.
+- The chatbox pauses while VRChat is not running or game isolation is on. **OSC connection**
+  sets the **Address** and **Port** OSC messages go to.
 
 The AI Assistant can also send chatbox messages and change these settings, but only after you
 approve each request.

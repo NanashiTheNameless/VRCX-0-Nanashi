@@ -3,6 +3,7 @@ import type {
     LlmHeader,
     LlmModelReasoning
 } from '@/platform/tauri/bindings';
+import { OPENROUTER_API_BASE_URL } from '@/shared/constants/link';
 
 export const CUSTOM_LLM_ENDPOINT_PROVIDER_ID = 'custom';
 export const DEFAULT_LLM_ENDPOINT_PROVIDER_ID = 'openai';
@@ -130,7 +131,7 @@ export const LLM_ENDPOINT_PROVIDER_PRESETS: LlmEndpointProviderPreset[] = [
         id: 'openrouter',
         name: 'OpenRouter',
         label: 'OpenRouter',
-        baseUrl: 'https://openrouter.ai/api/v1',
+        baseUrl: OPENROUTER_API_BASE_URL,
         apiKind: 'openaiCompatible'
     },
     {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { encodeMentions, findMentionQuery, splitMentions } from './mentions';
+import {
+    encodeMentions,
+    findMentionQuery,
+    mentionToken,
+    splitMentions
+} from './mentions';
 
 describe('mentions', () => {
     it('encodes picked names longest first and leaves unknown @names alone', () => {
@@ -53,6 +58,24 @@ describe('mentions', () => {
                 target: { kind: 'user', id: 'usr_1', name: 'Alice' }
             },
             { kind: 'text', text: ' hi' }
+        ]);
+    });
+
+    it('escapes link syntax in names so a name cannot rewrite the mention link', () => {
+        const target = {
+            kind: 'user' as const,
+            id: 'usr_1',
+            name: 'evil](https://x.example) [VR \\['
+        };
+
+        const token = mentionToken(target);
+
+        expect(token).toBe(
+            '[@evil\\]\\(https://x.example\\) \\[VR \\\\\\[](vrcx-0-nanashi://user/open?id=usr_1)'
+        );
+        expect(splitMentions(`hi ${token}`)).toEqual([
+            { kind: 'text', text: 'hi ' },
+            { kind: 'mention', target }
         ]);
     });
 

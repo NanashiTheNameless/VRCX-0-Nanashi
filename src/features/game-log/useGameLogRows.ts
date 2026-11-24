@@ -8,6 +8,20 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+    getGameLogRowKey,
+    mergeGameLogSessionHead
+} from '@/components/game-log/gameLogRows';
+import {
+    GAME_LOG_LIVE_REFRESH_THROTTLE_MS,
+    GAME_LOG_SESSION_HEAD_QUERY_LIMIT
+} from '@/components/game-log/gameLogTypes';
+import type {
+    GameLogLoadStatus,
+    GameLogRow,
+    GameLogSession,
+    GameLogViewMode
+} from '@/components/game-log/gameLogTypes';
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useThrottledValue } from '@/lib/useThrottledValue';
@@ -18,18 +32,6 @@ import { useFavoriteStore } from '@/state/favoriteStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
-
-import { getGameLogRowKey, mergeGameLogSessionHead } from './gameLogRows';
-import {
-    GAME_LOG_LIVE_REFRESH_THROTTLE_MS,
-    GAME_LOG_SESSION_HEAD_QUERY_LIMIT
-} from './gameLogTypes';
-import type {
-    GameLogLoadStatus,
-    GameLogRow,
-    GameLogSession,
-    GameLogViewMode
-} from './gameLogTypes';
 
 type GameLogSessionQuery = NonNullable<
     Parameters<typeof gameLogRepository.queryLatestSessions>[0]
@@ -100,46 +102,49 @@ export function useGameLogRows({
     const seenLiveEventCountRef = useRef(throttledGameLogEventCount);
 
     const drainSessionHeadRefresh = useEffectEvent(() => {
-        if (
-            !headRefreshQueuedRef.current ||
-            fullLoadRunningRef.current ||
-            headRefreshRunningRef.current
-        ) {
-            return;
+        function drain() {
+            if (
+                !headRefreshQueuedRef.current ||
+                fullLoadRunningRef.current ||
+                headRefreshRunningRef.current
+            ) {
+                return;
+            }
+            headRefreshQueuedRef.current = false;
+            const liveQuery = liveSessionQueryRef.current;
+            if (!liveQuery) {
+                return;
+            }
+            const requestId = requestIdRef.current;
+            headRefreshRunningRef.current = true;
+            void gameLogRepository
+                .queryLatestSessions({
+                    ...liveQuery,
+                    limit: GAME_LOG_SESSION_HEAD_QUERY_LIMIT
+                })
+                .then((head) => {
+                    if (requestIdRef.current !== requestId) {
+                        return;
+                    }
+                    setSessions((current) =>
+                        mergeGameLogSessionHead(
+                            current,
+                            head,
+                            liveQuery.limit ?? current.length
+                        )
+                    );
+                })
+                .catch(() => {
+                    if (requestIdRef.current === requestId) {
+                        setLiveReloadToken((current) => current + 1);
+                    }
+                })
+                .finally(() => {
+                    headRefreshRunningRef.current = false;
+                    drain();
+                });
         }
-        headRefreshQueuedRef.current = false;
-        const liveQuery = liveSessionQueryRef.current;
-        if (!liveQuery) {
-            return;
-        }
-        const requestId = requestIdRef.current;
-        headRefreshRunningRef.current = true;
-        void gameLogRepository
-            .queryLatestSessions({
-                ...liveQuery,
-                limit: GAME_LOG_SESSION_HEAD_QUERY_LIMIT
-            })
-            .then((head) => {
-                if (requestIdRef.current !== requestId) {
-                    return;
-                }
-                setSessions((current) =>
-                    mergeGameLogSessionHead(
-                        current,
-                        head,
-                        liveQuery.limit ?? current.length
-                    )
-                );
-            })
-            .catch(() => {
-                if (requestIdRef.current === requestId) {
-                    setLiveReloadToken((current) => current + 1);
-                }
-            })
-            .finally(() => {
-                headRefreshRunningRef.current = false;
-                drainSessionHeadRefresh();
-            });
+        drain();
     });
 
     const handleLiveGameLogEvent = useEffectEvent(() => {

@@ -17,6 +17,14 @@ import {
 } from '@/components/data-table/LogFilterContextMenu';
 import { TimestampText } from '@/components/data-table/TimestampText';
 import { DeferredContextMenu } from '@/components/DeferredContextMenu';
+import {
+    getGameLogExternalTarget,
+    getGameLogSessionPlayerAffinity
+} from '@/components/game-log/gameLogRows';
+import type {
+    GameLogSessionEvent,
+    GameLogSessionMember
+} from '@/components/game-log/gameLogTypes';
 import { UserBadges } from '@/components/UserBadges';
 import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
@@ -43,18 +51,10 @@ import {
     useGameLogFilterCommands
 } from '../gameLogFilterCommands';
 import {
-    getGameLogExternalTarget,
-    getGameLogSessionPlayerAffinity
-} from '../gameLogRows';
-import {
     useGameLogSessionAffinity,
     type GameLogSessionAffinity
 } from '../gameLogSessionAffinity';
 import { getGameLogSessionPlayerDuration } from '../gameLogSessionDurations';
-import type {
-    GameLogSessionEvent,
-    GameLogSessionMember
-} from '../gameLogTypes';
 import { SafetyLogBadge } from './SafetyLogBadge';
 
 const PLAYER_EVENT_GRID_CLASS =

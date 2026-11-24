@@ -15,7 +15,7 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appProfileHistorySettingsSet: api.set
     }
 }));
-vi.mock('../SettingsCard', () => ({
+vi.mock('@/components/layout/SettingsCard', () => ({
     SettingsCard: ({ children }: { children: React.ReactNode }) => (
         <section>{children}</section>
     )

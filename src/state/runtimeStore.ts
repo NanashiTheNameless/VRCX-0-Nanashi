@@ -250,6 +250,7 @@ type RuntimeStore = {
     setFriendProfileLoadState(patch: Partial<FriendProfileLoadState>): void;
     resetFriendProfileLoadState(): void;
     setTransportState(patch: Partial<TransportState>): void;
+    resetTransportState(): void;
     recordRuntimeEvent(name: string, payload: unknown): void;
     setBackendRuntimeSnapshot(snapshot: BackendRuntimeSnapshot | null): void;
     setNotificationDoNotDisturb(
@@ -504,6 +505,7 @@ type RuntimeStoreState = Omit<
     | 'setFriendProfileLoadState'
     | 'resetFriendProfileLoadState'
     | 'setTransportState'
+    | 'resetTransportState'
     | 'recordRuntimeEvent'
     | 'setGameState'
     | 'setBackendRuntimeSnapshot'
@@ -781,6 +783,11 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
                 ...patch
             }
         }));
+    },
+    resetTransportState() {
+        set({
+            transport: createTransportState()
+        });
     },
     recordRuntimeEvent(name: string, payload: unknown) {
         set((state) => {

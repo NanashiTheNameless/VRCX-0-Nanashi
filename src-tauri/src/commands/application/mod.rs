@@ -14,6 +14,7 @@ pub mod frontend_batch;
 pub mod global_badges;
 pub mod group_calendar;
 pub mod group_quick_moderation;
+pub mod heart_rate;
 pub mod integration_api;
 pub mod lifecycle;
 pub mod llm_endpoint;

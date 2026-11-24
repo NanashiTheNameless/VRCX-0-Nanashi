@@ -5,8 +5,8 @@ use super::{
 };
 use crate::{
     AvatarBitmap, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine,
-    FeedRelation, FeedSeverity, MainSurfaceModel, OverlayFooter, OverlayNowPlaying, OverlaySize,
-    PlayerCell, RgbaFrame, ToastCard, WristSurfaceModel, WristTextScale,
+    FeedRelation, FeedSeverity, FeedStatusDot, MainSurfaceModel, OverlayFooter, OverlayNowPlaying,
+    OverlaySize, PlayerCell, RgbaFrame, ToastCard, WristSurfaceModel, WristTextScale,
 };
 use std::{sync::Arc, thread};
 
@@ -780,6 +780,7 @@ fn wrist_feed_item_preserves_actor_detail_and_muted_media_detail() {
         severity: FeedSeverity::Important,
         accent: FeedAccent::None,
         badges: Vec::new(),
+        status_dot: None,
     };
     let media = FeedLine {
         time_text: String::new(),
@@ -790,6 +791,7 @@ fn wrist_feed_item_preserves_actor_detail_and_muted_media_detail() {
         severity: FeedSeverity::Normal,
         accent: FeedAccent::None,
         badges: Vec::new(),
+        status_dot: None,
     };
 
     let favorite_item = wrist_feed_item(&favorite, true);
@@ -819,6 +821,7 @@ fn wrist_feed_friends_are_yellow_and_only_favorites_get_a_star() {
         severity: FeedSeverity::Normal,
         accent: FeedAccent::Online,
         badges: Vec::new(),
+        status_dot: None,
     };
     let friend = wrist_feed_item(&row, true);
     row.relation = FeedRelation::Favorite;
@@ -844,6 +847,7 @@ fn wrist_feed_item_uses_feed_type_accents_and_keeps_severity_precedence() {
         severity: FeedSeverity::Normal,
         accent: FeedAccent::Online,
         badges: Vec::new(),
+        status_dot: None,
     };
 
     let online = wrist_feed_item(&row, true);
@@ -866,6 +870,24 @@ fn wrist_feed_item_uses_feed_type_accents_and_keeps_severity_precedence() {
         warning.accent_color,
         to_slint_color(crate::Color::rgba(239, 68, 68, 255))
     );
+}
+
+#[test]
+fn wrist_feed_item_colors_the_status_dot_by_the_new_status() {
+    let mut row = feed_row(1);
+    assert!(!wrist_feed_item(&row, true).show_status_dot);
+
+    for (status, color) in [
+        (FeedStatusDot::Active, crate::Color::rgba(46, 211, 25, 255)),
+        (FeedStatusDot::JoinMe, crate::Color::rgba(0, 184, 255, 255)),
+        (FeedStatusDot::AskMe, crate::Color::rgba(233, 124, 3, 255)),
+        (FeedStatusDot::Busy, crate::Color::rgba(200, 9, 40, 255)),
+    ] {
+        row.status_dot = Some(status);
+        let item = wrist_feed_item(&row, true);
+        assert!(item.show_status_dot);
+        assert_eq!(item.status_color, to_slint_color(color));
+    }
 }
 
 #[test]
@@ -922,6 +944,7 @@ fn sample_wrist_model() -> WristSurfaceModel {
             severity: FeedSeverity::Important,
             accent: FeedAccent::None,
             badges: Vec::new(),
+            status_dot: None,
         }],
         players: Vec::new(),
         text: WristTextScale::default(),
@@ -970,6 +993,7 @@ fn feed_row(index: u32) -> FeedLine {
         severity: FeedSeverity::Normal,
         accent: FeedAccent::None,
         badges: Vec::new(),
+        status_dot: None,
     }
 }
 

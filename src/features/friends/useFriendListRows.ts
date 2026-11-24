@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { FriendStats } from '@/domain/friends/friendStats';
@@ -30,6 +30,16 @@ type FriendListRowCacheEntry = {
     row: FriendListRow;
     stats: FriendStats | undefined;
 };
+
+function createFriendListRowCache() {
+    let entries = new Map<string, FriendListRowCacheEntry>();
+    return {
+        current: () => entries,
+        replace(next: Map<string, FriendListRowCacheEntry>) {
+            entries = next;
+        }
+    };
+}
 
 export function useFriendListRows({
     activeSearchFilterIds,
@@ -79,9 +89,9 @@ export function useFriendListRows({
     // keep their identity, so rows are reused whenever their inputs are
     // reference-equal. Without this the row memo in FriendListTable can never hit
     // and every visible row re-renders on each flush.
-    const rowCacheRef = useRef(new Map<string, FriendListRowCacheEntry>());
+    const [rowCache] = useState(createFriendListRowCache);
     const rosterRows = useMemo<FriendListRow[]>(() => {
-        const previousCache = rowCacheRef.current;
+        const previousCache = rowCache.current();
         const nextCache = new Map<string, FriendListRowCacheEntry>();
         const rows: FriendListRow[] = [];
         for (const friendId of orderedFriendIds) {
@@ -110,9 +120,16 @@ export function useFriendListRows({
             });
             rows.push(row);
         }
-        rowCacheRef.current = nextCache;
+        rowCache.replace(nextCache);
         return rows;
-    }, [factsById, friendsById, orderedFriendIds, profileBioById, statsById]);
+    }, [
+        factsById,
+        friendsById,
+        orderedFriendIds,
+        profileBioById,
+        rowCache,
+        statsById
+    ]);
     const filteredRows = useMemo(() => {
         return filterFriendListRows({
             rosterRows,

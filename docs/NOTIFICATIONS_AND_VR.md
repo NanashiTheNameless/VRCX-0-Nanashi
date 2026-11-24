@@ -147,8 +147,11 @@ A menu on your wrist in VR, opened with a controller button.
 - **Feed order**: newest at the top or bottom; when the feed does not fit, the oldest entries
   are left out.
 - The top row shows your devices and battery levels (optionally as percentages), and the
-  bottom row the player count, instance time and clock. A dark background and hiding private
-  worlds are options.
+  bottom row the player count, instance time and clock. **Show Seconds** adds seconds to the
+  clock and counts the instance and play time to the second while the menu is open. A dark
+  background and hiding private worlds are options.
+- A status change in the feed shows a colored dot for the new status: green for Active, blue
+  for Join Me, orange for Ask Me and red for Busy.
 - **Size and placement**: width, maximum height, header, content and footer text size, and
   moving the menu sideways, up or down, out from the wrist, and tilting it, with an anchored
   edge that stays put when the menu grows.

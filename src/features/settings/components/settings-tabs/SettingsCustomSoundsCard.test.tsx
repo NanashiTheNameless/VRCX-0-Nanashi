@@ -32,7 +32,7 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appNotificationSoundsBundled: mocks.bundled
     }
 }));
-vi.mock('../SettingsCard', () => ({
+vi.mock('@/components/layout/SettingsCard', () => ({
     SettingsCard: ({ children }: PropsWithChildren) => (
         <section>{children}</section>
     )

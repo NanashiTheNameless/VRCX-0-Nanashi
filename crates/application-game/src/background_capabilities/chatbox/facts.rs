@@ -53,6 +53,7 @@ pub struct ChatboxFactSources {
     pub gpu: Option<ChatboxGpuStats>,
     pub is_game_running: bool,
     pub last_game_started_at: Option<i64>,
+    pub heart_rate: Option<u16>,
 }
 
 pub fn build_chatbox_facts(sources: ChatboxFactSources) -> ChatboxFacts {
@@ -68,6 +69,7 @@ pub fn build_chatbox_facts(sources: ChatboxFactSources) -> ChatboxFacts {
             sources.last_game_started_at,
             sources.now,
         ),
+        heart_rate: sources.heart_rate,
     }
 }
 
@@ -94,6 +96,7 @@ pub fn sample_chatbox_facts(local_time: NaiveTime) -> ChatboxFacts {
             temperature_celsius: Some(62.0),
         }),
         game_session_seconds: Some(3_900),
+        heart_rate: Some(72),
     }
 }
 

@@ -12,6 +12,7 @@ import authRepository, {
 } from '@/repositories/authRepository';
 import { toast } from '@/services/toastService';
 import { clearUserDialogCaches } from '@/services/userDialogSessionCacheService';
+import { resetVrcNotificationState } from '@/services/vrcNotificationService';
 import { isRecord } from '@/shared/utils/record';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { useDeviceLoginStore } from '@/state/deviceLoginStore';
@@ -27,7 +28,6 @@ import {
     useRuntimeStore
 } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
-import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 
 import {
     beginAuthAttempt,
@@ -213,6 +213,17 @@ function clearCurrentUserRuntimeAuthState() {
 
 export function resetCurrentUserRuntimeAuth() {
     clearCurrentUserRuntimeAuthState();
+}
+
+function resetAccountState() {
+    useDialogStore.getState().clearDialogState();
+    useModalStore.getState().resetModalState();
+    resetVrcNotificationState();
+    const runtimeStore = useRuntimeStore.getState();
+    runtimeStore.resetTransportState();
+    runtimeStore.clearInstanceQueueState();
+    runtimeStore.resetMutualGraphState();
+    useSessionStore.getState().setTransportStatus('disconnected');
 }
 
 function setCurrentUserRuntimeAuth(
@@ -477,9 +488,7 @@ export async function logoutWithoutConfirmation() {
     const currentUserDisplayName = runtimeStore.auth.currentUserDisplayName;
     const sessionPhase = useSessionStore.getState().sessionPhase;
 
-    useDialogStore.getState().clearDialogState();
-    useModalStore.getState().resetModalState();
-    useVrcNotificationStore.getState().resetVrcNotificationState();
+    resetAccountState();
 
     if (!currentUserId && sessionPhase !== 'authenticating') {
         resetCurrentUserRuntimeAuth();
@@ -539,6 +548,9 @@ async function executeLoginAttempt({
     transformError?: (error: AuthExecutionError) => void;
 }) {
     const attempt = beginAuthAttempt();
+    if (useRuntimeStore.getState().auth.currentUserId) {
+        resetAccountState();
+    }
     useRuntimeStore.getState().setStartupTask('auth', 'running', startupDetail);
     setAuthenticatingSessionState();
 

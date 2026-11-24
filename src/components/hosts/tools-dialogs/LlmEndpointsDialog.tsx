@@ -1,19 +1,24 @@
 import {
     AlertTriangleIcon,
-    EyeIcon,
-    EyeOffIcon,
     PlusIcon,
     RefreshCwIcon,
     SquarePenIcon,
     Trash2Icon
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 import type { LlmEndpointDto } from '@/platform/tauri/bindings';
+import {
+    deleteLlmEndpoint,
+    detectLlmEndpointModels,
+    loadLlmEndpoints,
+    upsertLlmEndpoint
+} from '@/services/llmEndpointsService';
 import { toast } from '@/services/toastService';
 import { mergeModels, useLlmEndpointsStore } from '@/state/llmEndpointsStore';
+import { SecretInput } from '@/ui/secret-input';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
@@ -26,12 +31,6 @@ import {
     DialogTitle
 } from '@/ui/shadcn/dialog';
 import { Input } from '@/ui/shadcn/input';
-import {
-    InputGroup,
-    InputGroupAddon,
-    InputGroupButton,
-    InputGroupInput
-} from '@/ui/shadcn/input-group';
 import { Label } from '@/ui/shadcn/label';
 import {
     Select,
@@ -138,18 +137,14 @@ export function LlmEndpointsDialog({
     const { t } = useTranslation();
     const endpoints = useLlmEndpointsStore((state) => state.endpoints);
     const loading = useLlmEndpointsStore((state) => state.loading);
-    const load = useLlmEndpointsStore((state) => state.load);
-    const upsert = useLlmEndpointsStore((state) => state.upsert);
-    const deleteEndpoint = useLlmEndpointsStore(
-        (state) => state.deleteEndpoint
-    );
-    const detectModels = useLlmEndpointsStore((state) => state.detectModels);
     const [view, setView] = useState<'list' | 'edit'>('list');
     const [draft, setDraft] = useState<EndpointDraft>(
         createEmptyLlmEndpointDraft
     );
     const draftRef = useRef(draft);
-    draftRef.current = draft;
+    useLayoutEffect(() => {
+        draftRef.current = draft;
+    });
     const [catalog, setCatalog] = useState<{
         target: EndpointDraft;
         models: string[];
@@ -158,7 +153,6 @@ export function LlmEndpointsDialog({
     const [modelSearch, setModelSearch] = useState('');
     const [manualModels, setManualModels] = useState('');
     const [saving, setSaving] = useState(false);
-    const [showApiKey, setShowApiKey] = useState(false);
     const baseUrlValid = isValidBaseUrl(draft.baseUrl);
     const modelOptions = mergeModels(
         catalog && sameDetectionTarget(catalog.target, draft)
@@ -186,7 +180,7 @@ export function LlmEndpointsDialog({
             return;
         }
         setView('list');
-        load().catch((error: unknown) => {
+        loadLlmEndpoints().catch((error: unknown) => {
             toast.add({
                 type: 'error',
                 title:
@@ -198,7 +192,7 @@ export function LlmEndpointsDialog({
         return () => {
             detectionRevision.current += 1;
         };
-    }, [open, load, t]);
+    }, [open, t]);
 
     function closeEditView() {
         detectionRevision.current += 1;
@@ -220,7 +214,6 @@ export function LlmEndpointsDialog({
         setCatalog(null);
         setModelSearch('');
         setManualModels('');
-        setShowApiKey(false);
         setView('edit');
     }
 
@@ -232,7 +225,6 @@ export function LlmEndpointsDialog({
         setCatalog({ target, models: endpoint.models });
         setModelSearch('');
         setManualModels('');
-        setShowApiKey(false);
         setView('edit');
         return target;
     }
@@ -251,7 +243,7 @@ export function LlmEndpointsDialog({
         const revision = ++detectionRevision.current;
         try {
             const useSavedEndpoint = shouldUseSavedLlmEndpointForDetect(target);
-            const result = await detectModels({
+            const result = await detectLlmEndpointModels({
                 id: useSavedEndpoint ? target.id : null,
                 baseUrl: useSavedEndpoint
                     ? null
@@ -314,7 +306,7 @@ export function LlmEndpointsDialog({
         setSaving(true);
         try {
             const { models } = target;
-            await upsert({
+            await upsertLlmEndpoint({
                 id: target.id,
                 name: target.name.trim(),
                 baseUrl: target.baseUrl.trim(),
@@ -378,7 +370,7 @@ export function LlmEndpointsDialog({
 
     async function deleteEndpointWithFeedback(endpoint: LlmEndpointDto) {
         try {
-            await deleteEndpoint(endpoint.id);
+            await deleteLlmEndpoint(endpoint.id);
             toast.add({
                 type: 'success',
                 title: t('view.tools.llm_endpoints.deleted')
@@ -608,50 +600,24 @@ export function LlmEndpointsDialog({
                                     </Button>
                                 ) : null}
                             </div>
-                            <InputGroup>
-                                <InputGroupInput
-                                    id="llm-endpoint-dialog-api-key"
-                                    type={showApiKey ? 'text' : 'password'}
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                    value={draft.apiKey}
-                                    disabled={draft.clearKey}
-                                    placeholder={
-                                        draft.id
-                                            ? t(
-                                                  'view.tools.llm_endpoints.key_preserve_placeholder'
-                                              )
-                                            : 'sk-...'
-                                    }
-                                    onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            apiKey: event.target.value
-                                        }))
-                                    }
-                                />
-                                <InputGroupAddon align="inline-end">
-                                    <InputGroupButton
-                                        size="icon-xs"
-                                        aria-label={t(
-                                            showApiKey
-                                                ? 'view.tools.llm_endpoints.hide_key'
-                                                : 'view.tools.llm_endpoints.show_key'
-                                        )}
-                                        aria-pressed={showApiKey}
-                                        disabled={draft.clearKey}
-                                        onClick={() =>
-                                            setShowApiKey((current) => !current)
-                                        }
-                                    >
-                                        {showApiKey ? (
-                                            <EyeOffIcon />
-                                        ) : (
-                                            <EyeIcon />
-                                        )}
-                                    </InputGroupButton>
-                                </InputGroupAddon>
-                            </InputGroup>
+                            <SecretInput
+                                id="llm-endpoint-dialog-api-key"
+                                value={draft.apiKey}
+                                disabled={draft.clearKey}
+                                placeholder={
+                                    draft.id
+                                        ? t(
+                                              'view.tools.llm_endpoints.key_preserve_placeholder'
+                                          )
+                                        : 'sk-...'
+                                }
+                                onChange={(event) =>
+                                    setDraft((current) => ({
+                                        ...current,
+                                        apiKey: event.target.value
+                                    }))
+                                }
+                            />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="llm-endpoint-dialog-headers">
