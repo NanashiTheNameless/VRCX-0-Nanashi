@@ -7,7 +7,7 @@ development packages, for example on Debian/Ubuntu:
 
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev \
-  librsvg2-dev libayatana-appindicator3-dev libasound2-dev
+  librsvg2-dev libayatana-appindicator3-dev libasound2-dev libdbus-1-dev
 ```
 
 Linux CI and AppImage builds use the maintained WebKitGTK and JavaScriptCore

@@ -21,10 +21,16 @@ import { KeepAliveOutlet } from './KeepAliveOutlet';
 
 const locationsSeen: Record<string, string[]> = {};
 
+// Records every render, including ones a hidden page does in the background,
+// which is what these tests check; an effect would miss those.
+function recordRender(name: string, path: string) {
+    (locationsSeen[name] ??= []).push(path);
+}
+
 function Counter({ name }: { name: string }) {
     const [count, setCount] = useState(0);
     const location = useLocation();
-    (locationsSeen[name] ??= []).push(location.pathname + location.search);
+    recordRender(name, location.pathname + location.search);
     return (
         <button type="button" onClick={() => setCount((value) => value + 1)}>
             {name}:{count}
