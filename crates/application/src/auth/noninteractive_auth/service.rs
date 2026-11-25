@@ -181,6 +181,15 @@ fn rejected_probe_error<T>(
     stage: CookieProbeStage,
     response: VrchatResponse,
 ) -> std::result::Result<T, NonInteractiveAuthError> {
+    // Fork: a Cloudflare block page says nothing about the session, so it is a
+    // temporary failure rather than a revoked session.
+    if response.status == 403 {
+        if let Some(block) = crate::avatars::cloudflare_block(&response.data) {
+            return Err(NonInteractiveAuthError::Failed(format!(
+                "VRChat's network blocked the request ({block})."
+            )));
+        }
+    }
     let reason = cookie_probe_rejection_reason(stage, &response);
     if matches!(response.status, 401 | 403) {
         Err(NonInteractiveAuthError::SessionInvalidated {
@@ -300,6 +309,41 @@ mod tests {
             result,
             Err(NonInteractiveAuthError::Failed(message))
                 if message == "VRChat auth request failed with HTTP 500."
+        ));
+    }
+
+    #[test]
+    fn cloudflare_block_is_a_temporary_failure_not_an_invalid_session() {
+        let blocked = vrcx_0_contracts::vrchat_api::vrchat_response(
+            403,
+            "<html><title>Attention Required! | Cloudflare</title>error code: 1020</html>".into(),
+        );
+        for stage in [CookieProbeStage::Config, CookieProbeStage::CurrentUser] {
+            let result: std::result::Result<(), _> =
+                rejected_probe_error("usr_1".into(), stage, blocked.clone());
+            assert!(matches!(
+                result,
+                Err(NonInteractiveAuthError::Failed(reason)) if reason.contains("cf_1020")
+            ));
+        }
+    }
+
+    #[test]
+    fn vrchat_403_still_invalidates_the_session() {
+        let result: std::result::Result<(), _> = rejected_probe_error(
+            "usr_1".into(),
+            CookieProbeStage::CurrentUser,
+            response(
+                403,
+                serde_json::json!({ "error": { "message": "Forbidden" } }),
+            ),
+        );
+        assert!(matches!(
+            result,
+            Err(NonInteractiveAuthError::SessionInvalidated {
+                status_code: Some(403),
+                ..
+            })
         ));
     }
 

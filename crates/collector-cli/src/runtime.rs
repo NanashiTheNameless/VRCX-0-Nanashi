@@ -170,17 +170,51 @@ fn spawn_control_reader(mut reader: OwnedReadHalf) -> mpsc::Receiver<ControlRequ
     receiver
 }
 
-/// The session was refused. The collector stays up only to tell the
-/// supervisor so, and never retries the rejected session.
-async fn report_auth_failure(control: UnixStream) -> Outcome {
+/// Why VRChat refused the session, in fixed words that carry nothing VRChat
+/// sent back, so the supervisor can show which case it was.
+fn auth_failure_message(error: &vrcx_0_composition::Error) -> &'static str {
+    match error {
+        vrcx_0_composition::Error::AuthInteractionRequired(_) => {
+            "VRChat asked for two-factor authentication for the session."
+        }
+        vrcx_0_composition::Error::AuthSessionInvalidated {
+            status_code: Some(401),
+            ..
+        } => "VRChat did not accept the session (HTTP 401).",
+        vrcx_0_composition::Error::AuthSessionInvalidated {
+            status_code: Some(403),
+            ..
+        } => "VRChat did not accept the session (HTTP 403).",
+        _ => "VRChat did not accept the session.",
+    }
+}
+
+/// Why the session could not start for a reason other than VRChat refusing
+/// it, again in fixed words only.
+fn start_failure_message(error: &vrcx_0_composition::Error) -> &'static str {
+    if error
+        .to_string()
+        .contains("VRChat's network blocked the request")
+    {
+        "VRChat's network (Cloudflare) blocked the server's requests."
+    } else {
+        "VRChat could not be reached to start the session."
+    }
+}
+
+/// The session could not start. The collector stays up only to tell the
+/// supervisor why, and never retries it. These are per-session failures, so
+/// they must not exit as `collector_unavailable`, which turns the collector
+/// off for every account.
+async fn report_start_failure(
+    control: UnixStream,
+    code: &'static str,
+    message: &'static str,
+) -> Outcome {
     let (reader, mut writer) = control.into_split();
     let mut requests = spawn_control_reader(reader);
     while let Some(request) = requests.recv().await {
-        let response = failure(
-            request.id,
-            "auth_failed",
-            "VRChat did not accept the session.",
-        );
+        let response = failure(request.id, code, message);
         if write_frame(&mut writer, &response).await.is_err() {
             break;
         }
@@ -461,15 +495,21 @@ pub async fn run(
     let user_id = match started {
         Ok(user_id) => user_id,
         Err(
-            vrcx_0_composition::Error::AuthSessionInvalidated { .. }
-            | vrcx_0_composition::Error::AuthInteractionRequired(_),
+            error @ (vrcx_0_composition::Error::AuthSessionInvalidated { .. }
+            | vrcx_0_composition::Error::AuthInteractionRequired(_)),
         ) => {
             state.stop_runtime_tasks();
-            return report_auth_failure(control).await;
+            return report_start_failure(control, "auth_failed", auth_failure_message(&error))
+                .await;
         }
-        Err(_) => {
+        Err(error) => {
             state.stop_runtime_tasks();
-            return Outcome::Unavailable("VRChat could not be reached to start the session".into());
+            return report_start_failure(
+                control,
+                "vrchat_unreachable",
+                start_failure_message(&error),
+            )
+            .await;
         }
     };
     let Ok(scope) = StreamScope::open(state.database(), &user_id) else {
@@ -814,7 +854,11 @@ mod tests {
     #[tokio::test]
     async fn a_refused_session_is_reported_as_auth_failed_until_the_supervisor_hangs_up() {
         let (supervisor, child) = UnixStream::pair().unwrap();
-        let reporting = tokio::spawn(report_auth_failure(child));
+        let reporting = tokio::spawn(report_start_failure(
+            child,
+            "auth_failed",
+            "VRChat did not accept the session (HTTP 401).",
+        ));
         let (mut reader, mut writer) = supervisor.into_split();
         for id in [7, 8] {
             write_frame(
@@ -826,10 +870,56 @@ mod tests {
             let reply: ControlResponse =
                 ciborium::from_reader(read_frame(&mut reader).await.unwrap().as_slice()).unwrap();
             assert_eq!((reply.id, reply.ok), (id, false));
-            assert_eq!(reply.error.unwrap().code, "auth_failed");
+            let error = reply.error.unwrap();
+            assert_eq!(error.code, "auth_failed");
+            assert_eq!(
+                error.message,
+                "VRChat did not accept the session (HTTP 401)."
+            );
         }
         drop((reader, writer));
         assert!(matches!(reporting.await.unwrap(), Outcome::Stopped));
+    }
+
+    #[test]
+    fn start_failure_messages_separate_cloudflare_from_other_errors() {
+        let custom = |reason: &str| {
+            vrcx_0_composition::Error::from(vrcx_0_application_core::Error::Custom(reason.into()))
+        };
+        assert_eq!(
+            start_failure_message(&custom("VRChat's network blocked the request (cf_1020).")),
+            "VRChat's network (Cloudflare) blocked the server's requests."
+        );
+        assert_eq!(
+            start_failure_message(&custom("private vrchat text")),
+            "VRChat could not be reached to start the session."
+        );
+    }
+
+    #[test]
+    fn auth_failure_messages_name_the_case_without_vrchat_text() {
+        let invalidated = |status_code| vrcx_0_composition::Error::AuthSessionInvalidated {
+            reason: "private vrchat text".into(),
+            status_code,
+        };
+        assert_eq!(
+            auth_failure_message(&invalidated(Some(401))),
+            "VRChat did not accept the session (HTTP 401)."
+        );
+        assert_eq!(
+            auth_failure_message(&invalidated(Some(403))),
+            "VRChat did not accept the session (HTTP 403)."
+        );
+        assert_eq!(
+            auth_failure_message(&invalidated(None)),
+            "VRChat did not accept the session."
+        );
+        assert_eq!(
+            auth_failure_message(&vrcx_0_composition::Error::AuthInteractionRequired(
+                "private vrchat text".into()
+            )),
+            "VRChat asked for two-factor authentication for the session."
+        );
     }
 
     #[test]
