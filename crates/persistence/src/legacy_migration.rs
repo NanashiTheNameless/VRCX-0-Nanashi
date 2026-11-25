@@ -88,9 +88,10 @@ pub fn prepare_legacy_migration(
     )?;
 
     let result = (|| {
+        let staged_database = staging_dir.join(STAGED_DATABASE_FILE);
         copy_database_snapshot(
             &source.db_path,
-            &staging_dir.join(STAGED_DATABASE_FILE),
+            &staged_database,
             |completed_pages, total_pages| {
                 on_progress(LegacyMigrationProgress::DatabaseCopy {
                     completed_pages,
@@ -98,6 +99,7 @@ pub fn prepare_legacy_migration(
                 });
             },
         )?;
+        ensure_snapshot_passes_quick_check(&staged_database)?;
         on_progress(LegacyMigrationProgress::Configuration);
         if let Some(config_path) = source.config_path.as_ref() {
             copy_replace(config_path.clone(), staging_dir.join(STAGED_CONFIG_FILE))?;
@@ -202,6 +204,20 @@ fn install_staged_legacy_vrcx_data(
     crate::profile_backup::replace_file_atomically(&staged_database, &paths.db_file)?;
     crate::profile_backup::sync_directory_durable(&paths.app_data)?;
     Ok(())
+}
+
+fn ensure_snapshot_passes_quick_check(db_path: &Path) -> Result<(), Error> {
+    let result = Connection::open_with_flags(db_path, OpenFlags::SQLITE_OPEN_READ_ONLY).and_then(
+        |connection| connection.query_row("PRAGMA quick_check", [], |row| row.get::<_, String>(0)),
+    );
+    let detail = match result {
+        Ok(status) if status == "ok" => return Ok(()),
+        Ok(status) => status,
+        Err(error) => error.to_string(),
+    };
+    Err(Error::InvalidData(format!(
+        "The VRCX database is corrupted and cannot be migrated. Your VRCX data was not changed. You can keep using VRCX-0-Nanashi without migrating, or migrate again after the VRCX database is repaired. ({detail})"
+    )))
 }
 
 pub fn copy_database_snapshot(

@@ -132,8 +132,14 @@ module shows whether it is on.
   armbands, Garmin, COROS, Huawei, Amazfit, Xiaomi Smart Band 10 and more; turn on heart rate
   broadcast on the device). The card shows the device and the current reading. Insert the
   `{heartrate}` value into a status line to show it in the chatbox. While connected, the
-  reading is also sent as avatar parameters: the common `HR` and `isHRBeat` names (Pulsoid
-  and many Booth prefabs) and VRCOSC's `VRCOSC/Heartrate/...` names. Some devices connect to
+  reading is also sent as avatar parameters: by default the common `HR` and `isHRBeat` names
+  (Pulsoid and many Booth prefabs), plus VRCOSC's `VRCOSC/Heartrate/...` names.
+  **Customize parameter names** opens **Avatar parameters**, where you choose the names for
+  the heart rate (Int, beats per minute), heartbeat (Bool, on briefly with every beat),
+  connected (Bool, on while readings come in) and heart rate ratio (Float, 0-1, heart rate
+  divided by 240) parameters. Separate several names with commas, leave a field empty to
+  stop sending it, or use **Reset** to go back to the defaults. VRCOSC's names are always
+  sent and are not affected by these settings. Some devices connect to
   only one thing at a time, so a phone app may disconnect. The paired device belongs to this
   PC and is never part of Settings Sync. On macOS the system asks for Bluetooth access the
   first time.
