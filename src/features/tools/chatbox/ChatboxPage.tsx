@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { PageBody, PageScaffold } from '@/components/layout/PageScaffold';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader';
 import { commands } from '@/platform/tauri/bindings';
+import { chatboxStatusLabelKey } from '@/services/chatboxStatusLabel';
 import { openExternalLink } from '@/services/entityMediaService';
 import { useChatboxStore } from '@/state/chatboxStore';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/shadcn/alert';
@@ -17,7 +18,6 @@ import {
 } from '@/ui/shadcn/empty';
 import { Spinner } from '@/ui/shadcn/spinner';
 
-import { chatboxStatusLabelKey } from './chatboxConfig';
 import { ChatboxAfkCard } from './components/ChatboxAfkCard';
 import { ChatboxComposer } from './components/ChatboxComposer';
 import { ChatboxConnectionMenu } from './components/ChatboxConnectionMenu';

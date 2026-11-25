@@ -13,8 +13,15 @@ looks.
 - **Main area**: the page you are on.
 - **Friends sidebar** (the side panel) on the right. Show or hide it with Ctrl+Shift+B or the
   app menu.
-- **Status bar** at the bottom: background work such as the mutual friend fetch, and connection
-  state.
+- **Title bar** at the top: Quick Search, notifications, the AI Assistant (when it is on), the
+  theme toggle, Always on Top and Sidebar Mode, then a separator before the friends sidebar
+  button. The Sidebar Mode icon shows which way the window will change: folding to the narrow
+  strip, or unfolding back to the full window. Hover over a button for a card that says what it
+  does and what clicking it does.
+- **Status bar** at the bottom: background work such as the mutual friend fetch, connection
+  state, and quick toggles such as Do Not Disturb, Game Isolation, the Desktop Widget and the
+  Chatbox. Hover over an item for a card explaining its state and what clicking and
+  right-clicking it does.
 - **App menu**: Settings, Check for Updates, Restart, Switch to Background Mode, Sign Out,
   Quit, Quick Search, Keyboard Shortcuts, show or hide the friends sidebar, Sidebar Mode,
   Always on Top, zoom, Report Issue on GitHub, Third-Party Notices and About. About shows when

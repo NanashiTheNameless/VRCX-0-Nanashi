@@ -139,6 +139,10 @@ module shows whether it is on.
   first time.
 - The chatbox pauses while VRChat is not running or game isolation is on. **OSC connection**
   sets the **Address** and **Port** OSC messages go to.
+- **Status bar toggle**: on PCs where the app can watch the game, a Chatbox button in the
+  status bar shows whether the status display is on, paused or AFK. Click it to turn the status
+  display on or off; right-click it to turn individual pages on or off, go AFK, or open the
+  Chatbox page.
 
 The AI Assistant can also send chatbox messages and change these settings, but only after you
 approve each request.
