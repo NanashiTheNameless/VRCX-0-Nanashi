@@ -7,7 +7,6 @@ use super::{NotificationWebhookTransport, NotificationWebhookTransportError};
 
 const WEBHOOK_RETRY_DELAYS: &[Duration] = &[Duration::from_millis(750), Duration::from_secs(2)];
 const WEBHOOK_MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
-const WEBHOOK_STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -172,9 +171,7 @@ pub fn discord_webhook_url_with_wait(url: &str) -> String {
 }
 
 pub(super) async fn wait_for_webhook_stop(stop_token: &TaskStopToken) {
-    while !stop_token.is_stop_requested() {
-        tokio::time::sleep(WEBHOOK_STOP_POLL_INTERVAL).await;
-    }
+    stop_token.stopped().await;
 }
 
 fn webhook_retry_after(body: &str) -> Option<Duration> {

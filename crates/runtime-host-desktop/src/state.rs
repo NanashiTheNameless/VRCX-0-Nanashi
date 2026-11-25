@@ -96,7 +96,6 @@ const USER_GENERATED_CONTENT_PATH_CONFIG_KEY: &str = "userGeneratedContentPath";
 const REGISTRY_BACKUP_MAINTENANCE_JOB: &str = "registryBackupMaintenance";
 const REGISTRY_BACKUP_MAINTENANCE_CADENCE_SECONDS: u64 = 3 * 60 * 60;
 const REGISTRY_BACKUP_FOREGROUND_REUSE_WINDOW: Duration = Duration::from_secs(60);
-const DESKTOP_MAINTENANCE_STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub(crate) fn build_desktop_runtime_services_deps(
     context: &RuntimeHostDesktopAssemblyDeps,
@@ -2859,16 +2858,9 @@ impl DesktopRuntimeProfileExtension {
 }
 
 async fn wait_for_desktop_maintenance_tick(stop_token: &TaskStopToken) -> bool {
-    let deadline = Instant::now() + Duration::from_secs(1);
-    loop {
-        if stop_token.is_stop_requested() {
-            return true;
-        }
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        if remaining.is_zero() {
-            return false;
-        }
-        tokio::time::sleep(remaining.min(DESKTOP_MAINTENANCE_STOP_POLL_INTERVAL)).await;
+    tokio::select! {
+        () = stop_token.stopped() => true,
+        () = tokio::time::sleep(Duration::from_secs(1)) => stop_token.is_stop_requested(),
     }
 }
 

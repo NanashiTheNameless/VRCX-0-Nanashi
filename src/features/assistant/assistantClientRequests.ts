@@ -5,7 +5,6 @@ import type {
     AssistantClientRequestEvent,
     UIEditRequest
 } from '@/domain/assistant/types';
-import { getDocSource, headingSlug } from '@/features/docs/docsCatalog';
 import { commands, type JsonValue } from '@/platform/tauri/bindings';
 import {
     getSettingDeepLinkPath,
@@ -84,11 +83,14 @@ export function showSettingInGuide(
 }
 
 /** Opens the Docs page at a doc and section, with the guide card. */
-export function showDocInGuide(
+export async function showDocInGuide(
     docId: string,
     section: string,
     t: TFunction
-): AssistantGuideTarget | null {
+): Promise<AssistantGuideTarget | null> {
+    // The catalog bundles every doc; loading it here keeps it out of startup.
+    const { getDocSource, headingSlug } =
+        await import('@/features/docs/docsCatalog');
     const doc = getDocSource(docId);
     if (!doc) {
         return null;
@@ -196,7 +198,7 @@ export async function handleAssistantClientRequest(
             return;
         }
         case 'show_in_docs': {
-            const target = showDocInGuide(
+            const target = await showDocInGuide(
                 recordString(event.arguments, 'docId'),
                 recordString(event.arguments, 'section'),
                 t

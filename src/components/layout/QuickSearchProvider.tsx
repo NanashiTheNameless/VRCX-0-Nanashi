@@ -1,4 +1,5 @@
 import {
+    lazy,
     useCallback,
     useEffect,
     useMemo,
@@ -8,13 +9,21 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { QuickSearchDialog } from '@/components/sidebar/QuickSearchDialog';
+import { MountOnFirstOpen } from '@/components/hosts/MountOnFirstOpen';
 import { directAccessParse } from '@/services/directAccessService';
 import { getClipboardText } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { QuickSearchContext } from './useQuickSearchActions';
+
+// The search UI loads on first open and then stays mounted, so closing keeps
+// its input until the close animation finishes.
+const QuickSearchDialog = lazy(() =>
+    import('@/components/sidebar/QuickSearchDialog').then((module) => ({
+        default: module.QuickSearchDialog
+    }))
+);
 
 export function QuickSearchProvider({
     children,
@@ -137,30 +146,32 @@ export function QuickSearchProvider({
     return (
         <QuickSearchContext value={actions}>
             {children}
-            <QuickSearchDialog
-                open={enabled && search.open}
-                query={search.query}
-                retryInput={search.retryInput}
-                clipboardSession={search.clipboardSession}
-                onQueryChange={(query) =>
-                    setSearch((current) => ({ ...current, query }))
-                }
-                onOpenChange={(open) => {
-                    if (!open) {
-                        closeQuickSearch();
+            <MountOnFirstOpen open={enabled && search.open}>
+                <QuickSearchDialog
+                    open={enabled && search.open}
+                    query={search.query}
+                    retryInput={search.retryInput}
+                    clipboardSession={search.clipboardSession}
+                    onQueryChange={(query) =>
+                        setSearch((current) => ({ ...current, query }))
                     }
-                }}
-                onOpenChangeComplete={(open) => {
-                    if (!open) {
-                        setSearch((current) =>
-                            current.open
-                                ? current
-                                : { ...current, query: '', retryInput: '' }
-                        );
-                    }
-                }}
-                onDirectAccess={openDirectAccess}
-            />
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            closeQuickSearch();
+                        }
+                    }}
+                    onOpenChangeComplete={(open) => {
+                        if (!open) {
+                            setSearch((current) =>
+                                current.open
+                                    ? current
+                                    : { ...current, query: '', retryInput: '' }
+                            );
+                        }
+                    }}
+                    onDirectAccess={openDirectAccess}
+                />
+            </MountOnFirstOpen>
         </QuickSearchContext>
     );
 }

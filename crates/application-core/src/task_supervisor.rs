@@ -94,14 +94,46 @@ fn wait_until_deadline(deadline: Instant, mut is_finished: impl FnMut() -> bool)
     }
 }
 
+#[derive(Default)]
+struct StopSignal {
+    requested: AtomicBool,
+    notify: tokio::sync::Notify,
+}
+
+impl StopSignal {
+    fn request(&self) {
+        self.requested.store(true, Ordering::Release);
+        self.notify.notify_waiters();
+    }
+
+    fn is_requested(&self) -> bool {
+        self.requested.load(Ordering::Acquire)
+    }
+}
+
 #[derive(Clone)]
 pub struct TaskStopToken {
-    stop_requested: Arc<AtomicBool>,
+    stop_requested: Arc<StopSignal>,
 }
 
 impl TaskStopToken {
     pub fn is_stop_requested(&self) -> bool {
-        self.stop_requested.load(Ordering::Acquire)
+        self.stop_requested.is_requested()
+    }
+
+    /// Resolves once a stop is requested, without polling the flag.
+    pub async fn stopped(&self) {
+        loop {
+            let notified = self.stop_requested.notify.notified();
+            tokio::pin!(notified);
+            // Register before checking so a stop between the check and the
+            // await still wakes this waiter.
+            notified.as_mut().enable();
+            if self.is_stop_requested() {
+                return;
+            }
+            notified.await;
+        }
     }
 }
 
@@ -110,7 +142,7 @@ struct TaskSupervisorInner {
     executor: Mutex<Option<Arc<dyn RuntimeTaskExecutor>>>,
     task_handles: Mutex<Vec<Box<dyn RuntimeTaskHandle>>>,
     fallback_threads: Mutex<Vec<std::thread::JoinHandle<()>>>,
-    stop_tokens: Mutex<Vec<Arc<AtomicBool>>>,
+    stop_tokens: Mutex<Vec<Arc<StopSignal>>>,
 }
 
 struct TaskSupervisorLifecycle {
@@ -182,7 +214,7 @@ impl TaskSupervisor {
     fn spawn_task(
         &self,
         task: RuntimeTask,
-        stop_requested: Option<Arc<AtomicBool>>,
+        stop_requested: Option<Arc<StopSignal>>,
     ) -> TaskSpawnOutcome {
         self.spawn_task_factory(|| task, stop_requested)
     }
@@ -190,7 +222,7 @@ impl TaskSupervisor {
     fn spawn_task_factory(
         &self,
         make_task: impl FnOnce() -> RuntimeTask,
-        stop_requested: Option<Arc<AtomicBool>>,
+        stop_requested: Option<Arc<StopSignal>>,
     ) -> TaskSpawnOutcome {
         self.join_finished_task_handles();
         self.join_finished_fallback_tasks();
@@ -265,7 +297,7 @@ impl TaskSupervisor {
         F: FnOnce(TaskStopToken) -> Fut + Send + 'static,
         Fut: Future<Output = ()> + Send + 'static,
     {
-        let stop_requested = Arc::new(AtomicBool::new(false));
+        let stop_requested = Arc::new(StopSignal::default());
         let stop_requested_for_task = Arc::clone(&stop_requested);
         self.spawn_task_factory(
             move || {
@@ -281,7 +313,7 @@ impl TaskSupervisor {
     where
         F: FnOnce(TaskStopToken) + Send + 'static,
     {
-        let stop_requested = Arc::new(AtomicBool::new(false));
+        let stop_requested = Arc::new(StopSignal::default());
         let stop_requested_for_task = Arc::clone(&stop_requested);
         self.spawn_managed_thread(
             name.into(),
@@ -305,7 +337,7 @@ impl TaskSupervisor {
         &self,
         name: String,
         task: F,
-        stop_requested: Option<Arc<AtomicBool>>,
+        stop_requested: Option<Arc<StopSignal>>,
     ) -> TaskSpawnOutcome
     where
         F: FnOnce() + Send + 'static,
@@ -357,7 +389,7 @@ impl TaskSupervisor {
         match self.inner.stop_tokens.lock() {
             Ok(tokens) => {
                 for token in tokens.iter() {
-                    token.store(true, Ordering::Release);
+                    token.request();
                 }
             }
             Err(error) => tracing::warn!("failed to lock runtime task stop tokens: {error}"),
@@ -375,14 +407,13 @@ impl TaskSupervisor {
         }
     }
 
-    fn track_stop_token(&self, stop_requested: Option<Arc<AtomicBool>>) {
+    fn track_stop_token(&self, stop_requested: Option<Arc<StopSignal>>) {
         let Some(stop_requested) = stop_requested else {
             return;
         };
         match self.inner.stop_tokens.lock() {
             Ok(mut tokens) => {
-                tokens
-                    .retain(|token| Arc::strong_count(token) > 1 && !token.load(Ordering::Acquire));
+                tokens.retain(|token| Arc::strong_count(token) > 1 && !token.is_requested());
                 tokens.push(stop_requested);
             }
             Err(error) => tracing::warn!("failed to track runtime task stop token: {error}"),

@@ -13,12 +13,20 @@ import { DataDirCleanupHost } from './DataDirCleanupHost';
 import { MountOnFirstOpen } from './MountOnFirstOpen';
 import { ProfileRestoreResultHost } from './ProfileRestoreResultHost';
 import { DatabaseMaintenanceDialog } from './system-dialogs/DatabaseMaintenanceDialog';
-import { DatabaseUpgradeDialog } from './system-dialogs/DatabaseUpgradeDialog';
 import { DataDirMigrationDialog } from './system-dialogs/DataDirMigrationDialog';
 import { ProfileBackupDialogs } from './system-dialogs/ProfileBackupDialogs';
-import { UpdaterDialog } from './system-dialogs/UpdaterDialog';
 import { UpdateAvailableToastHost } from './UpdateAvailableToastHost';
 
+const UpdaterDialog = lazy(() =>
+    import('./system-dialogs/UpdaterDialog').then((module) => ({
+        default: module.UpdaterDialog
+    }))
+);
+const DatabaseUpgradeDialog = lazy(() =>
+    import('./system-dialogs/DatabaseUpgradeDialog').then((module) => ({
+        default: module.DatabaseUpgradeDialog
+    }))
+);
 const RegistryBackupDialog = lazy(() =>
     import('./system-dialogs/RegistryBackupDialog').then((module) => ({
         default: module.RegistryBackupDialog
@@ -115,12 +123,14 @@ export function SystemDialogsHost() {
             <DataDirCleanupHost />
             <DataDirMigrationDialog />
             <UpdateAvailableToastHost />
-            <UpdaterDialog
-                open={updaterOpen}
-                onOpenChange={(open: boolean) =>
-                    setSystemHostOpen('updaterOpen', open)
-                }
-            />
+            <MountOnFirstOpen open={updaterOpen}>
+                <UpdaterDialog
+                    open={updaterOpen}
+                    onOpenChange={(open: boolean) =>
+                        setSystemHostOpen('updaterOpen', open)
+                    }
+                />
+            </MountOnFirstOpen>
             <MountOnFirstOpen open={registryBackupOpen}>
                 <RegistryBackupDialog
                     open={registryBackupOpen}
@@ -145,9 +155,13 @@ export function SystemDialogsHost() {
                     }
                 />
             </MountOnFirstOpen>
-            <DatabaseUpgradeDialog
+            <MountOnFirstOpen
                 open={databaseUpgradeOpen || systemHostDatabaseUpgradeOpen}
-            />
+            >
+                <DatabaseUpgradeDialog
+                    open={databaseUpgradeOpen || systemHostDatabaseUpgradeOpen}
+                />
+            </MountOnFirstOpen>
             <DatabaseMaintenanceDialog />
             <ProfileBackupDialogs />
             <MountOnFirstOpen open={keyboardShortcutsOpen}>

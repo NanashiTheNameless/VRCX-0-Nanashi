@@ -224,7 +224,7 @@ describe('QuickSearchProvider', () => {
         fireEvent.click(screen.getByText('clipboard'));
         await waitFor(() => expect(mocks.directAccessParse).toHaveBeenCalled());
         fireEvent.click(screen.getByText('search'));
-        fireEvent.click(screen.getByText('close'));
+        fireEvent.click(await screen.findByText('close'));
         await act(async () => resolveOpen(false));
         expect(screen.queryByRole('dialog')).toBeNull();
         expect(mocks.toastAdd).not.toHaveBeenCalledWith(
@@ -248,20 +248,20 @@ describe('QuickSearchProvider', () => {
         expect(screen.queryByRole('dialog')).toBeNull();
     });
 
-    it('closes the search when the session is no longer ready', () => {
+    it('closes the search when the session is no longer ready', async () => {
         const view = render(<Harness />);
         fireEvent.click(screen.getByText('search'));
-        expect(screen.getByRole('dialog')).toBeTruthy();
+        expect(await screen.findByRole('dialog')).toBeTruthy();
         view.rerender(<Harness enabled={false} />);
         expect(screen.queryByRole('dialog')).toBeNull();
         view.rerender(<Harness />);
         expect(screen.queryByRole('dialog')).toBeNull();
     });
 
-    it('keeps the same dialog mounted and retains its input until closing completes', () => {
+    it('keeps the same dialog mounted and retains its input until closing completes', async () => {
         render(<Harness />);
         fireEvent.click(screen.getByText('search'));
-        fireEvent.change(screen.getByLabelText('query'), {
+        fireEvent.change(await screen.findByLabelText('query'), {
             target: { value: 'alice' }
         });
         const root = screen.getByTestId('dialog-root');
@@ -279,10 +279,10 @@ describe('QuickSearchProvider', () => {
         expect(mocks.dialogMounted).toHaveBeenCalledTimes(1);
     });
 
-    it('shares one dialog and starts a new detection session on every open', () => {
+    it('shares one dialog and starts a new detection session on every open', async () => {
         render(<Harness />);
         fireEvent.click(screen.getByText('search'));
-        const root = screen.getByTestId('dialog-root');
+        const root = await screen.findByTestId('dialog-root');
         const session = root.getAttribute('data-clipboard-session');
         fireEvent.click(screen.getByText('menu search'));
         expect(screen.getAllByRole('dialog')).toHaveLength(1);

@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { BoopEmojiDialog } from '@/components/dialogs/BoopEmojiDialog';
-import { FullscreenImageViewer } from '@/components/media/FullscreenImageViewer';
+import { MountOnFirstOpen } from '@/components/hosts/MountOnFirstOpen';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
@@ -16,6 +15,17 @@ import {
 } from '@/ui/shadcn/dialog';
 import { Input } from '@/ui/shadcn/input';
 import { Textarea } from '@/ui/shadcn/textarea';
+
+const BoopEmojiDialog = lazy(() =>
+    import('@/components/dialogs/BoopEmojiDialog').then((module) => ({
+        default: module.BoopEmojiDialog
+    }))
+);
+const FullscreenImageViewer = lazy(() =>
+    import('@/components/media/FullscreenImageViewer').then((module) => ({
+        default: module.FullscreenImageViewer
+    }))
+);
 
 const OTP_CODE_LENGTH = 6;
 const RECOVERY_CODE_LENGTH = 8;
@@ -226,17 +236,19 @@ export function ModalHost() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <BoopEmojiDialog
-                open={boopDialog.open}
-                isLocalUserVrcPlusSupporter={isLocalUserVrcPlusSupporter}
-                targetLabel={boopDialog.targetLabel}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        handleBoopDismiss();
-                    }
-                }}
-                onSend={handleBoopOk}
-            />
+            <MountOnFirstOpen open={boopDialog.open}>
+                <BoopEmojiDialog
+                    open={boopDialog.open}
+                    isLocalUserVrcPlusSupporter={isLocalUserVrcPlusSupporter}
+                    targetLabel={boopDialog.targetLabel}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            handleBoopDismiss();
+                        }
+                    }}
+                    onSend={handleBoopOk}
+                />
+            </MountOnFirstOpen>
             <Dialog
                 open={otpDialog.open}
                 disablePointerDismissal
@@ -309,14 +321,16 @@ export function ModalHost() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <FullscreenImageViewer
-                open={imageDialog.open}
-                url={imageDialog.url}
-                title={imageDialog.title}
-                fileName={imageDialog.fileName}
-                sourcePath={imageDialog.sourcePath}
-                onClose={closeImagePreview}
-            />
+            <MountOnFirstOpen open={imageDialog.open}>
+                <FullscreenImageViewer
+                    open={imageDialog.open}
+                    url={imageDialog.url}
+                    title={imageDialog.title}
+                    fileName={imageDialog.fileName}
+                    sourcePath={imageDialog.sourcePath}
+                    onClose={closeImagePreview}
+                />
+            </MountOnFirstOpen>
         </>
     );
 }

@@ -1,6 +1,5 @@
 import { lazy } from 'react';
 
-import { InviteMessageTemplatesDialog } from '@/components/dialogs/InviteMessageDialog';
 import { useFreeStoreItemStore } from '@/state/freeStoreItemStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -10,6 +9,11 @@ import {
     getEndpoint
 } from './tools-dialogs/toolsDialogUtils';
 
+const InviteMessageTemplatesDialog = lazy(() =>
+    import('@/components/dialogs/InviteMessageDialog').then((module) => ({
+        default: module.InviteMessageTemplatesDialog
+    }))
+);
 const AppLauncherDialog = lazy(() =>
     import('./tools-dialogs/AppLauncherDialog').then((module) => ({
         default: module.AppLauncherDialog
