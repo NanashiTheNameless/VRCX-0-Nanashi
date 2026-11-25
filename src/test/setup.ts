@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 vi.mock('react-i18next', async (importOriginal) => {
     const actual = await importOriginal<typeof import('react-i18next')>();
@@ -36,5 +36,15 @@ if (typeof window === 'undefined') {
     Object.defineProperty(globalThis, 'sessionStorage', {
         configurable: true,
         value: createMemoryStorage()
+    });
+}
+
+// Testing Library only unmounts automatically when vitest globals are on,
+// which they are not here. Without this, a render left mounted can run after
+// jsdom is torn down and fail with "window is not defined".
+if (typeof window !== 'undefined') {
+    const { cleanup } = await import('@testing-library/react');
+    afterEach(() => {
+        cleanup();
     });
 }
