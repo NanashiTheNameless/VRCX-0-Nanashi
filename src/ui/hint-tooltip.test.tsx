@@ -10,6 +10,10 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { HintTooltip, IntentTooltip } from '@/ui/hint-tooltip';
+
+// Hover opens through real timers (an intent rest delay, then a replayed
+// pointer event), which can take well over a second under a loaded run.
+const HOVER_OPEN_TIMEOUT = { timeout: 5000 };
 import { Button } from '@/ui/shadcn/button';
 import {
     DropdownMenu,
@@ -40,7 +44,7 @@ describe('HintTooltip', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Refresh')).toBeTruthy();
-        });
+        }, HOVER_OPEN_TIMEOUT);
 
         fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
         expect(onClick).toHaveBeenCalledTimes(1);
@@ -83,7 +87,11 @@ describe('HintTooltip', () => {
         expect(trigger.getAttribute('aria-label')).toBeNull();
         fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
 
-        const content = await screen.findByText('Full date');
+        const content = await screen.findByText(
+            'Full date',
+            undefined,
+            HOVER_OPEN_TIMEOUT
+        );
         expect(content.closest('.custom-content')).not.toBeNull();
     });
 });
