@@ -1,13 +1,15 @@
 import { lazy, Suspense } from 'react';
 
+import type { PreviousInstancesTableDialog as PreviousInstancesTableDialogComponent } from '@/components/dialogs/PreviousInstancesTableDialog';
 import { usePreviousInstancesDialogStore } from '@/state/previousInstancesDialogStore';
 
 // Tables, drag-and-drop and chart code load only when the dialog first opens.
+// lazy() drops the dialog's row type parameter, so the cast restores it.
 const PreviousInstancesTableDialog = lazy(() =>
     import('@/components/dialogs/PreviousInstancesTableDialog').then(
         (module) => ({ default: module.PreviousInstancesTableDialog })
     )
-);
+) as unknown as typeof PreviousInstancesTableDialogComponent;
 
 export function PreviousInstancesDialogHost() {
     const dialog = usePreviousInstancesDialogStore((state) => state.dialog);
