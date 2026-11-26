@@ -385,7 +385,7 @@ function checkAppearance(
         (!BADGE_ICON_NAME.test(icon) || (iconNames && !iconNames.has(icon)))
     ) {
         problems.push(
-            `${where}: "icon" must be a Lucide icon name like HandHeart (https://lucide.dev/icons/), or a Lucide Lab icon with "Lab" in front, like LabGemRing.`
+            `${where}: "icon" must be a Lucide icon name like HandHeart, or a Lucide Lab icon with "Lab" in front, like LabGemRing (https://lucide.dev/icons/?library=lab).`
         );
     }
     if (

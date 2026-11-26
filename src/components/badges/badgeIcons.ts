@@ -60,6 +60,18 @@ export function useBadgeIconCatalog(enabled = true): BadgeIconCatalog | null {
     return current;
 }
 
+// A saved "Lab" icon keeps drawing after Lucide adopts it: Lab drops the
+// drawing (or the catalog skips it), so fall back to Lucide's own icon.
+export function resolveBadgeIcon(
+    icons: Readonly<Record<string, LucideIcon>>,
+    name: string
+): LucideIcon | undefined {
+    return (
+        icons[name] ??
+        (/^Lab(?=[A-Z])/.test(name) ? icons[name.slice(3)] : undefined)
+    );
+}
+
 export function badgeIconLabel(name: string): string {
     // Lucide Lab icons are stored as "Lab" plus their name (see
     // badgeIconCatalogLab); no Lucide icon name starts that way.

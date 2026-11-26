@@ -1,7 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
 
 import { iconNodeOf, iconNodeToPath } from '@/components/badges/badgeIconPath';
-import { loadBadgeIcons } from '@/components/badges/badgeIcons';
+import {
+    loadBadgeIcons,
+    resolveBadgeIcon
+} from '@/components/badges/badgeIcons';
 import {
     badgeRuleGroupIds,
     badgeUserFactsFrom,
@@ -149,7 +152,7 @@ class StyleTable {
     private path(name: string): string {
         let path = this.paths.get(name);
         if (path === undefined) {
-            const icon = this.icons[name];
+            const icon = resolveBadgeIcon(this.icons, name);
             const node = icon ? iconNodeOf(icon) : null;
             path = node ? iconNodeToPath(node) : '';
             this.paths.set(name, path);

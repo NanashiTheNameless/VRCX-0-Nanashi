@@ -1,7 +1,7 @@
 import { isReservedBadgeIcon } from '@/domain/badges/customBadges';
 import { cn } from '@/lib/utils';
 
-import { useBadgeIconCatalog } from './badgeIcons';
+import { resolveBadgeIcon, useBadgeIconCatalog } from './badgeIcons';
 
 export function BadgeIcon({
     name,
@@ -20,7 +20,7 @@ export function BadgeIcon({
     const Icon =
         (!allowReserved && isReservedBadgeIcon(name)
             ? null
-            : catalog?.icons[name]) ??
+            : catalog && resolveBadgeIcon(catalog.icons, name)) ??
         catalog?.icons[fallback] ??
         catalog?.icons.Star;
     if (!Icon) {

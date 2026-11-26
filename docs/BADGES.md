@@ -134,7 +134,7 @@ A custom badge has:
 
 - a **name** (up to 32 characters),
 - a **color** (pick one of the presets or any color),
-- an **icon**: any [Lucide](https://lucide.dev/icons/) or Lucide Lab icon, except
+- an **icon**: any [Lucide or Lucide Lab](https://lucide.dev/icons/?library=lab) icon, except
   [reserved ones](#reserved-icons). Lab icons show "(Lab)" in the picker.
 - **rules** that decide who gets it.
 
