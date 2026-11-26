@@ -57,6 +57,7 @@ export const ASSISTANT_EDITABLE_SETTINGS: ReadonlySet<string> = new Set([
     'notifications.tts.name-mode',
     'notifications.webhook.enabled',
     'notifications.webhook.auth-events',
+    'notifications.webhook.pause-with-do-not-disturb',
     'notifications.webhook.format',
     'vr.notifications.when-to-display',
     'vr.notifications.xsoverlay',

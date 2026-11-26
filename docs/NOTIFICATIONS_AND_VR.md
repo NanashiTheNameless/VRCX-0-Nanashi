@@ -72,8 +72,8 @@ yet, including ones offered before.
 ## Do Not Disturb
 
 Do Not Disturb pauses desktop notifications, text-to-speech, XSOverlay, OVR Toolkit and the
-app's HMD notifications. Webhooks, the wrist overlay feed and notification history keep
-working. Options:
+app's HMD notifications. The wrist overlay feed and notification history keep working.
+Webhooks keep sending unless **Pause During Do Not Disturb** is on under Webhooks. Options:
 
 - **Turn off when VRChat starts**.
 - **Turn on while your status is Do Not Disturb** in VRChat.
@@ -107,6 +107,10 @@ event, category, title, message, user, location, locationId, worldId, worldName,
 localTime) or as a **Discord** webhook message. It can also tell you when the app cannot
 restore a dropped background sign-in. **Send Test Webhook** checks it, and **Delivery status**
 shows the last success, the last failure and anything dropped.
+
+**Pause During Do Not Disturb** (off by default) stops notification webhooks while the app's
+Do Not Disturb is on. Your VRChat Do Not Disturb status and the privacy lock do not stop
+webhooks, and sign-in failure notifications are still sent.
 
 Discord notification titles include the user's name in the event text, even when the embed
 also shows it in the author line. Boop titles include the sender's name before the boop text.

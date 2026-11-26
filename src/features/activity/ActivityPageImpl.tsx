@@ -32,6 +32,11 @@ import {
     ToolbarViews,
     type ToolbarSegmentOption
 } from '@/components/layout/ToolbarControls';
+import {
+    STORAGE_KEYS,
+    readStoredText,
+    writeStoredText
+} from '@/lib/browserStorage';
 import { formatDateTime } from '@/lib/dateTime';
 import { useActivityPalette } from '@/lib/useActivityPalette';
 import { useTodayDate } from '@/lib/useTodayDate';
@@ -50,7 +55,6 @@ import { Separator } from '@/ui/shadcn/separator';
 import { Tabs, TabsContent } from '@/ui/shadcn/tabs';
 
 import {
-    ACTIVITY_JOURNEY_DENSITY_KEY,
     ACTIVITY_PAGE_MODE_KEY,
     normalizeActivityPageMode,
     normalizeJourneyDensity,
@@ -124,8 +128,11 @@ export function ActivityPageImpl() {
     const [companionOrder, setCompanionOrder] =
         useState<ActivityCompanionOrder>(DEFAULT_COMPANION_ORDER);
     const [showHomeWorld, setShowHomeWorld] = useState(false);
-    const [journeyDensity, setJourneyDensity] =
-        useState<JourneyDensity>('standard');
+    const [journeyDensity, setJourneyDensity] = useState<JourneyDensity>(() =>
+        normalizeJourneyDensity(
+            readStoredText(STORAGE_KEYS.activityJourneyDensity)
+        )
+    );
     const [journeyRange, setJourneyRange] = useState<DateTimeRangeValue>({
         from: null,
         to: null
@@ -150,28 +157,18 @@ export function ActivityPageImpl() {
         let active = true;
         void Promise.all([
             configRepository.getString(ACTIVITY_PAGE_MODE_KEY, null),
-            configRepository.getString(ACTIVITY_JOURNEY_DENSITY_KEY, null),
             configRepository.getString(ACTIVITY_PAGE_RANGE_KEY, null),
             configRepository.getString(ACTIVITY_PAGE_COMPANION_ORDER_KEY, null),
             configRepository.getBool(ACTIVITY_PAGE_SHOW_HOME_KEY, false)
-        ]).then(
-            ([
-                storedMode,
-                storedDensity,
-                storedRange,
-                storedOrder,
-                storedShowHome
-            ]) => {
-                if (!active) {
-                    return;
-                }
-                setMode(normalizeActivityPageMode(storedMode));
-                setJourneyDensity(normalizeJourneyDensity(storedDensity));
-                setRange(normalizeActivityRange(storedRange));
-                setCompanionOrder(normalizeCompanionOrder(storedOrder));
-                setShowHomeWorld(Boolean(storedShowHome));
+        ]).then(([storedMode, storedRange, storedOrder, storedShowHome]) => {
+            if (!active) {
+                return;
             }
-        );
+            setMode(normalizeActivityPageMode(storedMode));
+            setRange(normalizeActivityRange(storedRange));
+            setCompanionOrder(normalizeCompanionOrder(storedOrder));
+            setShowHomeWorld(Boolean(storedShowHome));
+        });
         return () => {
             active = false;
         };
@@ -269,7 +266,7 @@ export function ActivityPageImpl() {
 
     function onJourneyDensityChange(next: JourneyDensity) {
         setJourneyDensity(next);
-        void configRepository.setString(ACTIVITY_JOURNEY_DENSITY_KEY, next);
+        writeStoredText(STORAGE_KEYS.activityJourneyDensity, next);
     }
 
     function onRangeChange(next: ActivityRange | '') {

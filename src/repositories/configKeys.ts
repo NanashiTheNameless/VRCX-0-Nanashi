@@ -48,7 +48,6 @@ export const ConfigKeys = defineConfigKeys({
 
     // ── Nav ──────────────────────────────────────────
     navIsCollapsed: { type: 'bool', default: false },
-    navPanelWidth: { type: 'int', default: 240 },
 
     // ── Settings - General ───────────────────────────
     StartAtWindowsStartup: { type: 'bool', default: false },
@@ -201,6 +200,7 @@ export const ConfigKeys = defineConfigKeys({
     desktopWidgetNewestOnTop: { type: 'bool', default: true },
     webhookEnabled: { type: 'bool', default: false },
     webhookAuthEventsEnabled: { type: 'bool', default: true },
+    webhookPauseWithDoNotDisturb: { type: 'bool', default: false },
     webhookUrl: { type: 'string', default: '' },
     webhookFormat: { type: 'string', default: 'generic' },
     webhookFields: {
@@ -255,7 +255,6 @@ export const ConfigKeys = defineConfigKeys({
     feedTableFilters: { type: 'string', default: '[]' },
     feedViewMode: { type: 'string', default: 'table' },
     feedColumnsConfig: { type: 'string', default: '[]' },
-    feedColumnsDensity: { type: 'string', default: 'compact' },
     feedTimeDisplayMode: { type: 'string', default: 'relative' },
     hidePrivateFromFeed: { type: 'bool', default: false },
     friendLogNotificationDot: { type: 'bool', default: true },
@@ -268,12 +267,6 @@ export const ConfigKeys = defineConfigKeys({
     FavoritesFriendSort: { type: 'string', default: 'date' },
     FavoritesWorldSort: { type: 'string', default: 'date' },
     FavoritesAvatarSort: { type: 'string', default: 'date' },
-    FavoritesFriendSplitter: { type: 'string', default: '260' },
-    FavoritesWorldSplitter: { type: 'string', default: '260' },
-    FavoritesAvatarSplitter: { type: 'string', default: '260' },
-    FavoritesFriendDensity: { type: 'string', default: 'compact' },
-    FavoritesWorldDensity: { type: 'string', default: 'standard' },
-    FavoritesAvatarDensity: { type: 'string', default: 'standard' },
 
     // ── Table Filters ────────────────────────────────
     notificationTableFilters: { type: 'string', default: '[]' },
@@ -289,29 +282,17 @@ export const ConfigKeys = defineConfigKeys({
 
     // ── View State ───────────────────────────────────
     MyAvatarsViewMode: { type: 'string', default: 'grid' },
-    MyAvatarsCardScale: { type: 'string', default: null },
-    MyAvatarsCardSpacing: { type: 'string', default: null },
     UserDialogAvatarSort: { type: 'string', default: 'name' },
-    FriendLocationDensity: { type: 'string', default: 'compact' },
     FriendLocationShowFavoritesInOnline: { type: 'bool', default: null },
     FriendLocationShowSameInstance: { type: 'bool', default: null },
     FriendLocationViewMode: { type: 'string', default: 'people' },
-    InstanceActivityBarWidth: { type: 'int', default: 25 },
     groupCalendarShowFeaturedEvents: { type: 'bool', default: false },
     toolsRecentList: { type: 'string', default: '[]' },
     boopRecentEmojis: { type: 'string', default: '[]' },
     screenshotGalleryFolder: { type: 'string', default: '' },
-    screenshotGalleryScrollPositions: { type: 'string', default: '{}' },
-
-    // ── Charts ───────────────────────────────────────
-    MutualGraphLayoutIterations: { type: 'int', default: null },
-    MutualGraphLayoutSpacing: { type: 'int', default: null },
-    MutualGraphEdgeCurvature: { type: 'float', default: null },
-    MutualGraphCommunitySeparation: { type: 'float', default: null },
 
     // ── Activity ─────────────────────────────────────
     activityPageMode: { type: 'string', default: null },
-    activityJourneyDensity: { type: 'string', default: null },
     activityPageRange: { type: 'string', default: null },
     activityPageShowHomeWorld: { type: 'bool', default: false },
     activityPageCompanionOrder: { type: 'string', default: null },
@@ -361,16 +342,6 @@ export const APP_THEME_CONFIG_KEYS = Object.freeze({
 });
 
 export const FAVORITES_LAYOUT_CONFIG_KEYS = Object.freeze({
-    splitter: Object.freeze({
-        friend: 'VRCX_FavoritesFriendSplitter',
-        world: 'VRCX_FavoritesWorldSplitter',
-        avatar: 'VRCX_FavoritesAvatarSplitter'
-    }),
-    density: Object.freeze({
-        friend: 'VRCX_FavoritesFriendDensity',
-        world: 'VRCX_FavoritesWorldDensity',
-        avatar: 'VRCX_FavoritesAvatarDensity'
-    }),
     sort: Object.freeze({
         friend: 'VRCX_FavoritesFriendSort',
         world: 'VRCX_FavoritesWorldSort',
@@ -385,7 +356,6 @@ export const FAVORITES_LAYOUT_CONFIG_KEYS = Object.freeze({
 
 export const ACTIVITY_PAGE_CONFIG_KEYS = Object.freeze({
     mode: 'activityPageMode',
-    journeyDensity: 'activityJourneyDensity',
     range: 'activityPageRange',
     showHomeWorld: 'activityPageShowHomeWorld',
     companionOrder: 'activityPageCompanionOrder'
@@ -400,7 +370,6 @@ export const USER_ACTIVITY_CONFIG_KEYS = Object.freeze({
 
 export const SCREENSHOT_GALLERY_CONFIG_KEYS = Object.freeze({
     folder: 'screenshotGalleryFolder',
-    scrollPositions: 'screenshotGalleryScrollPositions',
     searchLayout: 'screenshotSearchResultLayout'
 });
 

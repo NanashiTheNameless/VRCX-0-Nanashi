@@ -14,6 +14,7 @@ import { useShellStore } from '@/state/shellStore';
 
 import { refreshSavedAuthSnapshot } from './authSnapshotService';
 import { runStartupMaintenance } from './backgroundMaintenanceService';
+import { moveLayoutPreferencesToBrowserStorage } from './browserStorageMigrationService';
 import { initializeDatabaseUpgradeFlow } from './databaseUpgradeService';
 import { initializeHostCapabilities } from './hostCapabilityService';
 import { loadPreferenceSnapshot } from './preferencesService';
@@ -82,6 +83,10 @@ export async function initializeReactRuntime() {
             configRepository.init(bootstrapSnapshot?.configEntries),
             storageRepository.init()
         ]);
+        await runNonCriticalStartupSync(
+            'browser storage',
+            moveLayoutPreferencesToBrowserStorage()
+        );
 
         const [
             savedAppLanguage,

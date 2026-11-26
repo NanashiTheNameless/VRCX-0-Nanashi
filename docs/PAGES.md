@@ -26,7 +26,9 @@ A live and recorded stream of what your friends do. Entries are recorded while t
 
 **Two views:**
 
-- **Table**: one list with every entry. Expand an entry for details.
+- **Table**: one list with every entry. Expand an entry for details. The column menu in the
+  toolbar shows or hides columns (time, user, type and detail by default), and you can drag a
+  column header's handle to reorder columns unless the order is locked.
 - **Columns**: several side-by-side columns, each with its own title, friends (all friends, all
   or selected favorite groups, optionally excluding some) and entry types. The preset columns
   are Favorites, Location, Profile and Presence; **Restore preset** brings them back. Columns
@@ -296,4 +298,5 @@ With **Show New Dashboard Button** on (Settings > Interface > Navigation) you ca
 dashboards: add full, split or stacked rows and put a page in each panel (Feed, Friend Locations,
 Game Log, Current Players, favorites, Friend History, Friends, Moderation, Notifications, My
 Avatars, the VRChat Log Viewer or Tools) or a compact widget (recent feed, recent game log, or your
-current instance).
+current instance). The recent feed widget can show **Grouped friends only**, limited to friends in
+your selected favorite groups.

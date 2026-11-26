@@ -173,7 +173,11 @@ mod router_tests {
             .find(|tool| tool.name.as_ref() == "search_friend_feed")
             .expect("search_friend_feed should be registered");
 
-        for phrase in ["exact event evidence", "allHistory=true", "at most 50 rows"] {
+        for phrase in [
+            "exact event evidence",
+            "scans all history",
+            "at most 50 rows",
+        ] {
             assert!(
                 tool.description
                     .as_deref()
@@ -186,7 +190,6 @@ mod router_tests {
             "target",
             "eventTypes",
             "timeWindow",
-            "allHistory",
             "limit",
             "cursor",
         ] {
