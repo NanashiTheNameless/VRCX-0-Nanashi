@@ -376,3 +376,51 @@ fn group_reorder_puts_listed_groups_first_and_keeps_the_rest() {
         vec![c, a, b]
     );
 }
+
+#[test]
+fn synced_settings_carry_local_group_names_and_land_on_each_pcs_own_ids() {
+    let (_dir_a, pc_a) = test_db("group-names-a");
+    let (_dir_b, pc_b) = test_db("group-names-b");
+    let owner = OwnerId::new("usr_owner");
+    // The same groups were created in a different order on each PC.
+    let close_a = group(&pc_a, Some(&owner), FavoriteEntityKind::Friend, "Close");
+    let chill_a = group(&pc_a, None, FavoriteEntityKind::World, "Chill");
+    group(&pc_b, None, FavoriteEntityKind::World, "Chill");
+    group(&pc_b, Some(&owner), FavoriteEntityKind::Friend, "Other");
+    let close_b = group(&pc_b, Some(&owner), FavoriteEntityKind::Friend, "Close");
+    assert_ne!(close_a, close_b);
+
+    let sidebar = crate::config::resolve_config_key("sidebarFavoriteGroups");
+    let selected = crate::config::resolve_config_key("VRCX_FavoritesWorldSelectedGroup");
+    let names_a = LocalGroupNames::load(&pc_a, Some(&owner)).unwrap();
+    let names_b = LocalGroupNames::load(&pc_b, Some(&owner)).unwrap();
+
+    let sent = names_a.to_names(
+        &sidebar,
+        &format!(r#"["friend:group_0","local:{close_a}","local:999"]"#),
+    );
+    assert_eq!(sent, r#"["friend:group_0","local:Close","local:999"]"#);
+    assert_eq!(
+        names_b.to_ids(&sidebar, &sent),
+        format!(r#"["friend:group_0","local:{close_b}","local:999"]"#)
+    );
+
+    let sent = names_a.to_names(
+        &selected,
+        &format!(r#"{{"key":"{chill_a}","source":"local"}}"#),
+    );
+    assert_eq!(sent, r#"{"key":"Chill","source":"local"}"#);
+
+    // A group this PC does not have yet keeps its name.
+    assert_eq!(
+        names_b.to_ids(&sidebar, r#"["local:Missing"]"#),
+        r#"["local:Missing"]"#
+    );
+    assert_eq!(
+        names_b.to_ids(
+            &crate::config::resolve_config_key("theme"),
+            r#"["local:Close"]"#
+        ),
+        r#"["local:Close"]"#
+    );
+}

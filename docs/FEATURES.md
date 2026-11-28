@@ -114,6 +114,11 @@ device; its next History Sync updates the collector without changing other PCs' 
   AI Assistant preferences together. Existing exclusions are preserved when categories change.
   Changes apply on Save. A setting that is off keeps its value on that PC and is left alone
   on the server, so other PCs can still share it. The choice is per PC and is not synced.
+  Settings that point at a local favorite group (sidebar, feed columns, auto-accept invites,
+  notification filters, presence rules, custom badge rules, the selected favorites group)
+  travel with the group's name, because each PC numbers its own groups, and point at the
+  group of the same name on the other PC. Until that PC has the group, the reference waits for
+  it. Renaming a group counts as changing those settings, so the new name reaches other PCs.
 - **Manage it.** See and sign out connected clients, and delete the server copy, from the same
   settings page.
 

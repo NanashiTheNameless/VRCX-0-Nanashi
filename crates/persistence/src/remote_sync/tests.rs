@@ -1403,3 +1403,34 @@ fn favorites_travel_as_flat_rows_through_the_id_tables() {
         1
     );
 }
+
+#[test]
+fn renaming_a_local_group_marks_the_settings_that_refer_to_it_changed() {
+    use crate::config::{config_local_change_time, config_local_change_time_set};
+    use crate::favorites::{favorite_group_create, favorite_group_rename};
+    use vrcx_0_core::FavoriteEntityKind;
+
+    let (_dir, db, _scope) = setup("group-rename-settings");
+    let group = favorite_group_create(&db, None, FavoriteEntityKind::World, "Chill").unwrap();
+    let other = favorite_group_create(&db, None, FavoriteEntityKind::World, "Late").unwrap();
+    let sidebar = crate::config::resolve_config_key("sidebarFavoriteGroups");
+    let selected = crate::config::resolve_config_key("VRCX_FavoritesWorldSelectedGroup");
+    let unrelated = crate::config::resolve_config_key("feedColumnsConfig");
+    for (key, value) in [
+        (&sidebar, format!(r#"["local:{}"]"#, group.id)),
+        (
+            &selected,
+            format!(r#"{{"key":"{}","source":"local"}}"#, group.id),
+        ),
+        (&unrelated, format!(r#"["local:{}"]"#, other.id)),
+    ] {
+        crate::config::set_string(&db, key, &value).unwrap();
+        config_local_change_time_set(&db, key, 1).unwrap();
+    }
+
+    favorite_group_rename(&db, None, FavoriteEntityKind::World, group.id, "Calm").unwrap();
+
+    assert!(config_local_change_time(&db, &sidebar).unwrap().unwrap() > 1);
+    assert!(config_local_change_time(&db, &selected).unwrap().unwrap() > 1);
+    assert_eq!(config_local_change_time(&db, &unrelated).unwrap(), Some(1));
+}

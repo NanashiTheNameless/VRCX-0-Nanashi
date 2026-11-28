@@ -8,6 +8,7 @@ use crate::ownership::{owner_id_for_filter, owner_id_get_or_insert, OwnerId, Own
 use crate::Error;
 
 pub(crate) mod group_refs;
+pub use group_refs::LocalGroupNames;
 pub(crate) mod migration_v1;
 
 pub(crate) const GROUP_TABLE: &str = "vrcx0_favorite_group";

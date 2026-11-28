@@ -3,7 +3,9 @@ use vrcx_0_core::FavoriteEntityKind;
 
 use crate::common::row_string;
 use crate::config::resolve_config_key;
+use crate::database::DatabaseService;
 use crate::migration::MigrationTx;
+use crate::ownership::OwnerId;
 use crate::Error;
 
 const LOCAL_PREFIX: &str = "local:";
@@ -45,7 +47,7 @@ const SELECTED_GROUP_KEYS: [(&str, FavoriteEntityKind); 3] = [
     ),
 ];
 
-type GroupLookup<'a> = dyn Fn(FavoriteEntityKind, &str) -> Vec<i64> + 'a;
+type GroupLookup<'a> = dyn Fn(FavoriteEntityKind, &str) -> Vec<String> + 'a;
 
 pub(crate) fn rewrite_config_references(
     tx: &dyn MigrationTx,
@@ -88,6 +90,52 @@ pub(crate) fn table_exists(tx: &dyn MigrationTx, table: &str) -> Result<bool, Er
 
 pub(crate) fn quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
+}
+
+/// Fork: local group ids are numbered on each PC, so Settings Sync sends
+/// references to local groups by name and turns them back into this PC's ids
+/// when it applies them. A reference to a group this PC does not have keeps
+/// its name until the group arrives.
+pub struct LocalGroupNames {
+    groups: Vec<super::LocalFavoriteGroup>,
+}
+
+impl LocalGroupNames {
+    pub fn load(db: &DatabaseService, owner: Option<&OwnerId>) -> Result<Self, Error> {
+        let mut groups = Vec::new();
+        for kind in [
+            FavoriteEntityKind::Friend,
+            FavoriteEntityKind::World,
+            FavoriteEntityKind::Avatar,
+        ] {
+            groups.extend(super::favorite_group_list(db, owner, kind)?);
+        }
+        Ok(Self { groups })
+    }
+
+    /// The value to send: group ids replaced by group names.
+    pub fn to_names(&self, stored_key: &str, raw: &str) -> String {
+        rewrite_config_value(stored_key, raw, &|kind, token| {
+            vec![self
+                .groups
+                .iter()
+                .find(|group| group.kind == kind && group.id.to_string() == token)
+                .map_or_else(|| token.to_string(), |group| group.name.clone())]
+        })
+        .unwrap_or_else(|| raw.to_string())
+    }
+
+    /// The value to store here: group names replaced by this PC's group ids.
+    pub fn to_ids(&self, stored_key: &str, raw: &str) -> String {
+        rewrite_config_value(stored_key, raw, &|kind, token| {
+            vec![self
+                .groups
+                .iter()
+                .find(|group| group.kind == kind && group.name == token)
+                .map_or_else(|| token.to_string(), |group| group.id.to_string())]
+        })
+        .unwrap_or_else(|| raw.to_string())
+    }
 }
 
 fn rewrite_config_value(stored_key: &str, raw: &str, lookup: &GroupLookup<'_>) -> Option<String> {
@@ -224,12 +272,13 @@ fn replacement_keys(
 mod tests {
     use super::*;
 
-    fn names(kind: FavoriteEntityKind, token: &str) -> Vec<i64> {
-        match (kind, token) {
-            (FavoriteEntityKind::Friend, "Close") => vec![3, 7],
-            (FavoriteEntityKind::World, "Close") => vec![9],
-            _ => Vec::new(),
-        }
+    fn names(kind: FavoriteEntityKind, token: &str) -> Vec<String> {
+        let ids: &[i64] = match (kind, token) {
+            (FavoriteEntityKind::Friend, "Close") => &[3, 7],
+            (FavoriteEntityKind::World, "Close") => &[9],
+            _ => &[],
+        };
+        ids.iter().map(ToString::to_string).collect()
     }
 
     #[test]

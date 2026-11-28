@@ -12,6 +12,7 @@ use vrcx_0_application_core::{
 };
 use vrcx_0_core::OwnerId;
 use vrcx_0_nanashi_website_protocol as protocol;
+use vrcx_0_persistence::favorites::LocalGroupNames;
 use vrcx_0_persistence::remote_sync::{self as store, SyncLogEntry};
 use vrcx_0_remote_sync::engine::{self, SignerKey, SyncSecret};
 use vrcx_0_remote_sync::sync::{
@@ -269,6 +270,18 @@ fn local_setting_change_time_set(
 ) -> Result<()> {
     vrcx_0_persistence::config::config_local_change_time_set(db, key, changed_at_ms)
         .map_err(sync_error)
+}
+
+/// Two stored setting values that mean the same, even if written differently.
+fn same_setting_value(left: &str, right: &str) -> bool {
+    left == right
+        || matches!(
+            (
+                serde_json::from_str::<serde_json::Value>(left),
+                serde_json::from_str::<serde_json::Value>(right),
+            ),
+            (Ok(left), Ok(right)) if left == right
+        )
 }
 
 fn syncable_app_setting(key: &str) -> bool {
@@ -692,24 +705,40 @@ impl DesktopRuntimeHostState {
         Ok(groups)
     }
 
-    fn remote_sync_app_settings(&self) -> Result<BTreeMap<String, String>> {
+    /// Synced settings as they travel: local favorite groups by name.
+    fn remote_sync_app_settings(
+        &self,
+        names: &LocalGroupNames,
+    ) -> Result<BTreeMap<String, String>> {
         let choices = self.remote_sync_setting_choices();
         Ok(self
             .local_data
             .config_list_values()?
             .into_iter()
             .filter(|entry| syncable_app_setting(&entry.key) && choices.selects(&entry.key))
-            .map(|entry| (entry.key, entry.value))
+            .map(|entry| {
+                let value = names.to_names(&entry.key, &entry.value);
+                (entry.key, value)
+            })
             .collect())
+    }
+
+    fn remote_sync_group_names(
+        db: &vrcx_0_persistence::DatabaseService,
+        user_id: &str,
+    ) -> Result<LocalGroupNames> {
+        LocalGroupNames::load(db, Some(&OwnerId::new(user_id.to_owned()))).map_err(sync_error)
     }
 
     fn remote_sync_app_settings_prepare(
         &self,
         db: &vrcx_0_persistence::DatabaseService,
         scope: &vrcx_0_persistence::remote_sync::streams::StreamScope,
+        user_id: &str,
         allow_new_settings: bool,
     ) -> Result<()> {
-        let local = self.remote_sync_app_settings()?;
+        let names = Self::remote_sync_group_names(db, user_id)?;
+        let local = self.remote_sync_app_settings(&names)?;
         let synced = store::streams::app_settings_list(db, scope)?;
         let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
         let synced_by_key = synced
@@ -774,10 +803,19 @@ impl DesktopRuntimeHostState {
         &self,
         db: &vrcx_0_persistence::DatabaseService,
         scope: &vrcx_0_persistence::remote_sync::streams::StreamScope,
+        user_id: &str,
     ) -> Result<bool> {
         let synced = store::streams::app_settings_list(db, scope)?;
         let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
-        let mut current = self.remote_sync_app_settings()?;
+        // Favorites from this pass are imported by now, so names resolve.
+        let names = Self::remote_sync_group_names(db, user_id)?;
+        let mut current = self.remote_sync_app_settings(&names)?;
+        let stored = self
+            .local_data
+            .config_list_values()?
+            .into_iter()
+            .map(|entry| (entry.key, entry.value))
+            .collect::<std::collections::HashMap<_, _>>();
         let choices = self.remote_sync_setting_choices();
         let mut changed = false;
         for (key, value, updated_at) in &synced {
@@ -798,10 +836,15 @@ impl DesktopRuntimeHostState {
                     )?;
                     continue;
                 }
-                if local_value != value {
+                let wanted = names.to_ids(key, value);
+                // Same names, but a group that was missing before may exist now.
+                let unresolved = stored
+                    .get(key)
+                    .is_some_and(|stored| !same_setting_value(stored, &wanted));
+                if local_value != value || unresolved {
                     self.config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
                         key: key.clone(),
-                        value: value.clone(),
+                        value: wanted,
                     }])?;
                     current.insert(key.clone(), value.clone());
                     changed = true;
@@ -809,7 +852,7 @@ impl DesktopRuntimeHostState {
             } else {
                 self.config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
                     key: key.clone(),
-                    value: value.clone(),
+                    value: names.to_ids(key, value),
                 }])?;
                 current.insert(key.clone(), value.clone());
                 changed = true;
@@ -915,7 +958,7 @@ impl DesktopRuntimeHostState {
             store::vault_state_for_user(&db, &identity.api_origin, &identity.account_id, user_id)?
                 .is_some();
         if self.remote_sync_settings_enabled() {
-            self.remote_sync_app_settings_prepare(&db, &stream_scope, has_local_vault)?;
+            self.remote_sync_app_settings_prepare(&db, &stream_scope, user_id, has_local_vault)?;
         }
         if account.collector_allowed && has_local_vault {
             let (vault_id, state) = self.remote_sync_current_vault()?;
@@ -944,7 +987,7 @@ impl DesktopRuntimeHostState {
         }
         if self.remote_sync_settings_enabled()
             && !report.cancelled
-            && self.remote_sync_app_settings_apply(&db, &stream_scope)?
+            && self.remote_sync_app_settings_apply(&db, &stream_scope, user_id)?
         {
             self.safety().reload_settings();
             self.runtime

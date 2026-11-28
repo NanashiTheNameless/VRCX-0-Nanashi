@@ -179,8 +179,10 @@ fn seed(tx: &dyn MigrationTx) -> Result<(), Error> {
     rewrite_config_references(tx, &|kind, token| {
         group_ids
             .get(&(kind.as_str(), token.to_string()))
-            .cloned()
-            .unwrap_or_default()
+            .into_iter()
+            .flatten()
+            .map(ToString::to_string)
+            .collect()
     })?;
     verify(tx)
 }

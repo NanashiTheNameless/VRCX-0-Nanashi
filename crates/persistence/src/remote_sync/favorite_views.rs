@@ -38,6 +38,8 @@ pub(crate) fn ensure_favorite_views(db: &DatabaseService) -> Result<(), Error> {
         for sql in tombstone_trigger_sql() {
             db.execute_non_query(&sql, &Default::default())?;
         }
+        crate::config::ensure_config_table(db)?;
+        db.execute_non_query(RENAMED_GROUP_SETTINGS_TRIGGER, &Default::default())?;
         for (from, to) in RENAMED_TOMBSTONE_STREAMS {
             db.execute_non_query(
                 &format!(
@@ -93,6 +95,18 @@ fn view_sql(view: &str, kind: &str, column: &str, owned: bool) -> Vec<String> {
         ),
     ]
 }
+
+/// Settings Sync sends local group references by name, so renaming a group
+/// changes every setting that refers to it; marking them changed here lets the
+/// new names win over the copies other PCs still hold.
+const RENAMED_GROUP_SETTINGS_TRIGGER: &str = "CREATE TRIGGER IF NOT EXISTS remote_sync_renamed_group_settings AFTER UPDATE OF name ON vrcx0_favorite_group WHEN OLD.name <> NEW.name BEGIN \
+     INSERT INTO config_local_changes (key, changed_at) \
+     SELECT key, CAST(strftime('%s', 'now') AS INTEGER) FROM configs \
+     WHERE substr(lower(key), 1, 12) = 'config:vrcx_' \
+     AND (instr(value, '\"local:' || NEW.id || '\"') > 0 \
+     OR (instr(value, '\"source\":\"local\"') > 0 AND instr(value, '\"key\":\"' || NEW.id || '\"') > 0)) \
+     ON CONFLICT (key) DO UPDATE SET changed_at = excluded.changed_at; \
+     END";
 
 /// Deleting a favorite here records the old-style row key, so the deletion
 /// reaches other PCs; adding it again clears it. Renaming a group is a
