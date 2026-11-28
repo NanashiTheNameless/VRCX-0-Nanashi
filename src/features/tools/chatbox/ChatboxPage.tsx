@@ -7,6 +7,7 @@ import { commands } from '@/platform/tauri/bindings';
 import { chatboxStatusLabelKey } from '@/services/chatboxStatusLabel';
 import { openExternalLink } from '@/services/entityMediaService';
 import { useChatboxStore } from '@/state/chatboxStore';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/shadcn/alert';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
@@ -17,6 +18,7 @@ import {
     EmptyTitle
 } from '@/ui/shadcn/empty';
 import { Spinner } from '@/ui/shadcn/spinner';
+import { Switch } from '@/ui/shadcn/switch';
 
 import { ChatboxAfkCard } from './components/ChatboxAfkCard';
 import { ChatboxComposer } from './components/ChatboxComposer';
@@ -42,10 +44,26 @@ export function ChatboxPage() {
         <ToolPageHeader
             toolKey="chatbox"
             status={
-                status ? (
-                    <Badge variant="secondary">
-                        {t(chatboxStatusLabelKey(status))}
-                    </Badge>
+                config ? (
+                    <>
+                        <HintTooltip label={t('view.tools.chatbox.enabled')}>
+                            <Switch
+                                size="sm"
+                                checked={config.enabled}
+                                onCheckedChange={(enabled) =>
+                                    onUpdate((current) => ({
+                                        ...current,
+                                        enabled
+                                    }))
+                                }
+                            />
+                        </HintTooltip>
+                        {status ? (
+                            <Badge variant="secondary">
+                                {t(chatboxStatusLabelKey(status))}
+                            </Badge>
+                        ) : null}
+                    </>
                 ) : null
             }
             actions={

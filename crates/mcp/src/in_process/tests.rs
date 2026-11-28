@@ -119,12 +119,19 @@ async fn favorites_list_the_newest_rows_and_count_every_group() {
         ("wrld_b", "Chill"),
         ("wrld_c", "Games"),
     ] {
+        let group = vrcx_0_persistence::favorites::favorite_group_create(
+            db.as_ref(),
+            Some(&OwnerId::new("usr_owner")),
+            vrcx_0_core::FavoriteEntityKind::World,
+            group,
+        )
+        .unwrap();
         vrcx_0_persistence::favorites::favorite_add(
             db.as_ref(),
             Some(&OwnerId::new("usr_owner")),
             vrcx_0_core::FavoriteEntityKind::World,
             world_id.into(),
-            group.into(),
+            group.id,
         )
         .unwrap();
     }
@@ -397,6 +404,20 @@ async fn in_process_bridge_tolerates_reported_assistant_argument_shapes() {
         .await
         .unwrap();
     assert!(!copresence.is_error, "{}", copresence.text);
+
+    let capitalized_bool = tools
+        .call_tool(
+            "get_copresence_summary",
+            Some(Map::from_iter([
+                ("friendsOnly".into(), json!("True")),
+                ("groupBy".into(), json!("friend")),
+                ("limit".into(), json!(10)),
+                ("utcOffsetMinutes".into(), json!(540)),
+            ])),
+        )
+        .await
+        .unwrap();
+    assert!(!capitalized_bool.is_error, "{}", capitalized_bool.text);
 
     let activity = tools
         .call_tool(

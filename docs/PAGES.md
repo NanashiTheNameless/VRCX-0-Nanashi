@@ -119,8 +119,8 @@ Search VRChat by:
 - **Avatar**, through the avatar search provider set under Settings > Integrations > Remote
   Avatar Database (VRChat itself has no avatar search). Type at least 3 characters; filter
   public, private or all, and sort by name. If the provider's server blocks the request (for
-  example a Cloudflare block or challenge page), the app says so; try again later or switch
-  providers.
+  example a Cloudflare block or challenge page), the app says so with the HTTP status; try again
+  later or switch providers. Other failed searches also show the HTTP status.
 - **Group**.
 - **Explore** shows popular and newly discovered worlds with their instance counts, and can
   shuffle them. The top world is featured in a larger card. Cards show which friends are in
@@ -139,7 +139,11 @@ The **Favorites** folder holds four pages.
 
 - **Favorite Friends**, **Favorite Worlds** and **Favorite Avatars** show your VRChat favorites
   (in VRChat's own favorite groups) and your **local favorites**, which live only in the app and
-  have no size limit. Local groups can be created, renamed and deleted.
+  have no size limit. Local groups can be created, renamed, reordered and deleted. Friend groups
+  can be shared by every account on the PC or belong to one account; a name can be used only
+  once among the groups you see, and renaming a group keeps its favorites and every setting
+  that refers to it (feed columns, sidebar, auto-accept invites, notification filters, custom
+  badge rules and presence rules).
 - You can select several favorites to move or copy them to another group, copy their IDs,
   unfavorite them in bulk, export them to CSV, or import favorites. VRChat favorites can only be
   moved between VRChat groups.

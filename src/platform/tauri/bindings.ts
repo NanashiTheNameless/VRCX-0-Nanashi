@@ -122,6 +122,8 @@ export const commands = {
         __TAURI_INVOKE<ChatboxEditorState>('app__chatbox_editor_state_get'),
     appChatboxConfigSet: (config: ChatboxConfig) =>
         __TAURI_INVOKE<ChatboxConfig>('app__chatbox_config_set', { config }),
+    appChatboxEnabledSet: (enabled: boolean) =>
+        __TAURI_INVOKE<ChatboxConfig>('app__chatbox_enabled_set', { enabled }),
     appChatboxStatusEnabledSet: (enabled: boolean) =>
         __TAURI_INVOKE<ChatboxConfig>('app__chatbox_status_enabled_set', {
             enabled
@@ -148,6 +150,10 @@ export const commands = {
     appHeartRateConnectedSet: (connected: boolean) =>
         __TAURI_INVOKE<HeartRateStatus>('app__heart_rate_connected_set', {
             connected
+        }),
+    appHeartRateSendParametersSet: (sendParameters: boolean) =>
+        __TAURI_INVOKE<HeartRateStatus>('app__heart_rate_send_parameters_set', {
+            sendParameters
         }),
     appHeartRateParametersGet: () =>
         __TAURI_INVOKE<HeartRateParametersEditor>(
@@ -1518,25 +1524,19 @@ export const commands = {
         ),
     appLocalFavoriteAdd: (input: LocalFavoriteInput) =>
         __TAURI_INVOKE<number>('app__local_favorite_add', { input }),
-    appLocalFavoriteGroupCreate: (input: LocalFavoriteGroupInput) =>
-        __TAURI_INVOKE<LocalFavoriteGroupWrite>(
-            'app__local_favorite_group_create',
-            { input }
-        ),
-    appLocalFavoriteGroupDelete: (input: LocalFavoriteGroupInput) =>
-        __TAURI_INVOKE<LocalFavoriteGroupWrite>(
-            'app__local_favorite_group_delete',
-            { input }
-        ),
-    appLocalFavoriteGroupRename: (input: LocalFavoriteGroupRenameInput) =>
-        __TAURI_INVOKE<LocalFavoriteGroupWrite>(
-            'app__local_favorite_group_rename',
-            { input }
-        ),
-    appLocalFavoriteGroupReorder: (input: LocalFavoriteGroupReorderInput) =>
-        __TAURI_INVOKE<string[]>('app__local_favorite_group_reorder', {
+    appLocalFavoriteGroupCreate: (input: LocalFavoriteGroupCreateInput) =>
+        __TAURI_INVOKE<LocalFavoriteGroup>('app__local_favorite_group_create', {
             input
         }),
+    appLocalFavoriteGroupDelete: (input: LocalFavoriteGroupInput) =>
+        __TAURI_INVOKE<number>('app__local_favorite_group_delete', { input }),
+    appLocalFavoriteGroupRename: (input: LocalFavoriteGroupRenameInput) =>
+        __TAURI_INVOKE<number>('app__local_favorite_group_rename', { input }),
+    appLocalFavoriteGroupReorder: (input: LocalFavoriteGroupReorderInput) =>
+        __TAURI_INVOKE<LocalFavoriteGroup[]>(
+            'app__local_favorite_group_reorder',
+            { input }
+        ),
     appLocalFavoriteRemove: (input: LocalFavoriteInput) =>
         __TAURI_INVOKE<number>('app__local_favorite_remove', { input }),
     appLocalFavoriteReorder: (input: LocalFavoriteReorderInput) =>
@@ -4056,6 +4056,7 @@ export type ChatboxAfkConfig = {
 };
 
 export type ChatboxConfig = {
+    enabled: boolean;
     statusEnabled: boolean;
     pages: ChatboxPage[];
     afk: ChatboxAfkConfig;
@@ -4127,7 +4128,7 @@ export type ChatboxPageLine = {
     formats: ChatboxFormats;
 };
 
-export type ChatboxPauseReason = 'gameNotRunning' | 'isolated';
+export type ChatboxPauseReason = 'disabled' | 'gameNotRunning' | 'isolated';
 
 export type ChatboxProgressStyle = 'line' | 'blocks' | 'dots';
 
@@ -4701,8 +4702,8 @@ export type FavoriteBaselineSnapshot = {
     favoriteAvatarGroups: FavoriteGroupOutput[];
     localAvatarFavorites: { [key in string]: string[] };
     localFriendFavorites: { [key in string]: string[] };
-    localAvatarFavoriteGroups: string[];
-    localFriendFavoriteGroups: string[];
+    localAvatarFavoriteGroups: LocalFavoriteGroup[];
+    localFriendFavoriteGroups: LocalFavoriteGroup[];
     localAvatarFavoritesList: string[];
     localFriendFavoritesList: string[];
     detail: string;
@@ -4717,7 +4718,7 @@ export type FavoriteBulkRemoveItem = {
     key: string;
     source: FavoriteBulkRemoveSource;
     entityId: string;
-    groupName?: string;
+    groupId?: number | null;
 };
 
 export type FavoriteBulkRemoveItemResult = {
@@ -4758,22 +4759,22 @@ export type FavoriteChange =
           type: 'localAdded';
           kind: FavoriteEntityKind;
           entityId: string;
-          groupName: string;
+          groupId: number;
       }
     | {
           type: 'localRemoved';
           kind: FavoriteEntityKind;
           entityId: string;
-          groupName: string;
+          groupId: number;
       }
-    | { type: 'localGroupCreated'; kind: FavoriteEntityKind; groupName: string }
+    | { type: 'localGroupCreated'; group: LocalFavoriteGroup }
     | {
           type: 'localGroupRenamed';
           kind: FavoriteEntityKind;
-          groupName: string;
-          newGroupName: string;
+          groupId: number;
+          name: string;
       }
-    | { type: 'localGroupDeleted'; kind: FavoriteEntityKind; groupName: string }
+    | { type: 'localGroupDeleted'; kind: FavoriteEntityKind; groupId: number }
     | { type: 'remoteAdded'; favorite: RawJson }
     | { type: 'remoteRemoved'; objectId: string };
 
@@ -4866,6 +4867,7 @@ export type FavoriteImportTarget = {
 
 export type FavoriteRow = {
     createdAt: number;
+    groupId: number;
     groupName: string;
     userId?: string | null;
     avatarId?: string | null;
@@ -6315,6 +6317,7 @@ export type HeartRateStatus = {
     deviceName: string | null;
     bpm: number | null;
     problem: HeartRateProblem | null;
+    sendParameters: boolean;
 };
 
 export type HostArchitecture = 'x86_64' | 'aarch64' | 'unknown';
@@ -6717,43 +6720,49 @@ export type LlmModelReasoning = {
     mandatory: boolean;
 };
 
+export type LocalFavoriteGroup = {
+    id: number;
+    kind: FavoriteEntityKind;
+    name: string;
+    shared: boolean;
+};
+
+export type LocalFavoriteGroupCreateInput = {
+    kind: FavoriteEntityKind;
+    name?: string;
+};
+
 export type LocalFavoriteGroupInput = {
     kind: FavoriteEntityKind;
-    groupName?: string;
+    groupId: number;
 };
 
 export type LocalFavoriteGroupRenameInput = {
     kind: FavoriteEntityKind;
-    groupName?: string;
-    newGroupName?: string;
+    groupId: number;
+    name?: string;
 };
 
 export type LocalFavoriteGroupReorderInput = {
     kind: FavoriteEntityKind;
-    groupNames: string[];
-};
-
-export type LocalFavoriteGroupWrite = {
-    configKey: string;
-    groupNames: string[];
-    affected: number;
+    groupIds: number[];
 };
 
 export type LocalFavoriteInput = {
     kind: FavoriteEntityKind;
     entityId?: string;
-    groupName?: string;
+    groupId: number;
 };
 
 export type LocalFavoriteReorderInput = {
     kind: FavoriteEntityKind;
-    groupName?: string;
+    groupId: number;
     entityIds: string[];
 };
 
 export type LocalFavoriteSnapshot = {
     favorites: FavoriteRow[];
-    groupNames: string[];
+    groups: LocalFavoriteGroup[];
 };
 
 export type LocalGameAccount = {

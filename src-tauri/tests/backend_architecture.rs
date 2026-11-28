@@ -995,13 +995,13 @@ fn ipc_commands_that_take_paths_declare_where_the_path_is_checked() {
         ),
         (
             "app__data_export",
-            "crates/runtime-host-desktop/src/state.rs",
+            "crates/runtime-host-desktop/src/state/host_files.rs",
             "run_data_export",
             "ensure_host_write_allowed",
         ),
         (
             "app__data_import_stage",
-            "crates/runtime-host-desktop/src/state.rs",
+            "crates/runtime-host-desktop/src/state/host_files.rs",
             "stage_data_import",
             "ensure_host_read_allowed",
         ),
@@ -1121,7 +1121,7 @@ fn ipc_commands_that_take_paths_declare_where_the_path_is_checked() {
         ),
         (
             "app__profile_merge_run_file",
-            "crates/runtime-host-desktop/src/state.rs",
+            "crates/runtime-host-desktop/src/state/host_files.rs",
             "run_profile_merge_file",
             "ensure_host_read_allowed",
         ),
@@ -1163,7 +1163,7 @@ fn ipc_commands_that_take_paths_declare_where_the_path_is_checked() {
         ),
         (
             "app__start_game_from_path",
-            "crates/runtime-host-desktop/src/state.rs",
+            "crates/runtime-host-desktop/src/state/game.rs",
             "start_game_from_path",
             "ensure_vrchat_launch_path_allowed",
         ),
@@ -1324,7 +1324,7 @@ fn desktop_runtime_host_reaches_infrastructure_only_through_listed_modules() {
         "notification/indicator.rs",
         "safety/avatar_blocks.rs",
         "safety/mod.rs",
-        "state.rs",
+        "state/host_files.rs",
         "state/remote_sync.rs",
     ];
     const VRCHAT_CLIENT_MODULES: &[&str] = &["privacy_lock.rs", "state/remote_sync.rs"];

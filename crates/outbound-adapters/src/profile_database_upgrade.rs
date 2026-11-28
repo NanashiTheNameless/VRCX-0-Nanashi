@@ -5,7 +5,7 @@ use vrcx_0_persistence::migration::{
     preview as preview_migrations, run as run_schema_migrations, NoopProgress, Preview,
     PreviewStatus,
 };
-use vrcx_0_persistence::migrations::migrations;
+use vrcx_0_persistence::migrations::{migrations, reconcile_upstream_database};
 use vrcx_0_persistence::{
     read_upstream_schema_version, read_vrcx0_schema_version, write_upstream_schema_version,
     write_vrcx0_schema_version, DatabaseService, SqliteErrorCategory, VRCX0_SCHEMA_VERSION,
@@ -188,6 +188,7 @@ pub fn database_upgrade_preflight(db: &DatabaseService) -> Result<DatabaseUpgrad
 }
 
 fn migration_preview(db: &DatabaseService) -> Result<Preview, Error> {
+    reconcile_upstream_database(db)?;
     Ok(preview_migrations(db, &migrations())?)
 }
 
@@ -393,14 +394,16 @@ fn run_database_upgrade_inner(
         DatabaseUpgradeStage::SchemaMigrations,
         "run_schema_migrations",
     );
-    run_schema_migrations(db, &migrations(), &NoopProgress).map_err(|error| {
-        UpgradeFailure::during_upgrade(
-            from_version,
-            DatabaseUpgradeStage::SchemaMigrations,
-            "run_schema_migrations",
-            error,
-        )
-    })?;
+    reconcile_upstream_database(db)
+        .and_then(|_| run_schema_migrations(db, &migrations(), &NoopProgress))
+        .map_err(|error| {
+            UpgradeFailure::during_upgrade(
+                from_version,
+                DatabaseUpgradeStage::SchemaMigrations,
+                "run_schema_migrations",
+                error,
+            )
+        })?;
 
     run_optional_task(
         db,

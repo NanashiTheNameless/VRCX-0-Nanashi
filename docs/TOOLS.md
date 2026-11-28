@@ -116,6 +116,11 @@ messages you type. The page has two columns: the status pages on one side, and t
 box, AFK and heart rate modules on the other. Each module can be collapsed, and a collapsed
 module shows whether it is on.
 
+**Send to VRChat**, the switch at the top of the page, gates everything the Chatbox sends:
+status pages, typed messages, AFK text and heart rate avatar parameters. It is off until you
+turn it on, including for setups made before the switch existed, and while it is off nothing
+reaches VRChat.
+
 - **Status pages**: build one or more pages of lines from text and values: the time, what you
   are playing (track, title, artist, with a maximum length), how long you have been playing,
   CPU, GPU, RAM and VRAM use and temperatures, and more, with styles and symbols. Pages rotate
@@ -126,15 +131,16 @@ module shows whether it is on.
   quick phrases. A typing indicator can show while you type, and the notification sound can
   play when you send.
 - **AFK**: switch to an AFK text, optionally showing how long you have been away, by hand or
-  automatically when you take off your headset (needs the wrist overlay or HMD notifications
-  on).
+  automatically when you take off your headset (off by default; needs the wrist overlay or HMD
+  notifications on).
 - **Heart rate**: **Connect** pairs a standard Bluetooth heart rate device (chest straps and
   armbands, Garmin, COROS, Huawei, Amazfit, Xiaomi Smart Band 10 and more; turn on heart rate
-  broadcast on the device). The card shows the device and the current reading. Insert the
-  `{heartrate}` value into a status line to show it in the chatbox. While connected, the
-  reading is also sent as avatar parameters: by default the common `HR` and `isHRBeat` names
-  (Pulsoid and many Booth prefabs), plus VRCOSC's `VRCOSC/Heartrate/...` names.
-  **Customize parameter names** opens **Avatar parameters**, where you choose the names for
+  broadcast on the device). The card shows the device and the current reading in bpm. Insert
+  the `{heartrate}` value into a status line to show it in the chatbox. With **Send to avatar
+  parameters** on (the default) and Send to VRChat on, the reading is also sent as avatar
+  parameters: by default the common `HR` and `isHRBeat` names (Pulsoid and many Booth
+  prefabs), plus VRCOSC's `VRCOSC/Heartrate/...` names. The settings button next to it opens
+  **Avatar parameters**, where you choose the names for
   the heart rate (Int, beats per minute), heartbeat (Bool, on briefly with every beat),
   connected (Bool, on while readings come in) and heart rate ratio (Float, 0-1, heart rate
   divided by 240) parameters. Separate several names with commas, leave a field empty to
@@ -146,9 +152,9 @@ module shows whether it is on.
 - The chatbox pauses while VRChat is not running or game isolation is on. **OSC connection**
   sets the **Address** and **Port** OSC messages go to.
 - **Status bar toggle**: on PCs where the app can watch the game, a Chatbox button in the
-  status bar shows whether the status display is on, paused or AFK. Click it to turn the status
-  display on or off; right-click it to turn individual pages on or off, go AFK, or open the
-  Chatbox page.
+  status bar shows whether the Chatbox is on, paused or AFK. Click it to turn Send to VRChat
+  on or off; right-click it to turn the status display or individual pages on or off, go AFK,
+  or open the Chatbox page.
 
 The AI Assistant can also send chatbox messages and change these settings, but only after you
 approve each request.

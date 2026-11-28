@@ -193,13 +193,13 @@ pub const STATE_STREAMS: &[StateSpec] = &[
     ),
     state(
         "favorite_world",
-        StreamTable::Global("favorite_world"),
+        StreamTable::Global("remote_sync_favorite_world"),
         &["world_id", "group_name"],
         None,
     ),
     state(
         "favorite_avatar",
-        StreamTable::Global("favorite_avatar"),
+        StreamTable::Global("remote_sync_favorite_avatar"),
         &["avatar_id", "group_name"],
         None,
     ),
@@ -265,7 +265,7 @@ pub const STATE_STREAMS: &[StateSpec] = &[
     ),
     state(
         "favorite_friend",
-        StreamTable::Owned("favorite_friend"),
+        StreamTable::Owned("remote_sync_favorite_friend"),
         &["user_id", "group_name"],
         None,
     ),
@@ -461,6 +461,16 @@ fn import_state_row(
             &format!("INSERT OR IGNORE INTO {quoted} ({names}) VALUES ({holders})"),
             &insert.build(),
         )?;
+        // Rows written through a view's trigger are not counted as changes.
+        let added = if added == 0 && super::favorite_views::is_favorite_view(table) {
+            tx.execute(
+                &format!("SELECT 1 FROM {quoted} WHERE {conditions} LIMIT 1"),
+                &key,
+            )?
+            .len() as i64
+        } else {
+            added
+        };
         return Ok(if added > 0 {
             RowOutcome::Inserted
         } else {
@@ -537,6 +547,22 @@ fn import_state_deletion(
         Some(column) => format!(" AND ({0} IS NULL OR {0} <= @deleted_at)", quote(column)),
         None => String::new(),
     };
+    let lookup_params = || {
+        let mut lookup = ParamsBuilder::new().set("owner_row_id", scope.owner_row_id);
+        for (index, value) in key.iter().enumerate() {
+            lookup = lookup.set(&format!("k{index}"), value.clone());
+        }
+        lookup.build()
+    };
+    let lookup_sql = format!(
+        "SELECT 1 FROM {} WHERE {}{} LIMIT 1",
+        quote(table),
+        conditions.join(" AND "),
+        owner_filter(&stream),
+    );
+    // Rows deleted through a view's trigger are not counted as changes.
+    let view = super::favorite_views::is_favorite_view(table);
+    let existed = view && !tx.execute(&lookup_sql, &lookup_params())?.is_empty();
     let removed = tx.execute_non_query(
         &format!(
             "DELETE FROM {} WHERE {}{}{not_newer}",
@@ -546,23 +572,12 @@ fn import_state_deletion(
         ),
         &params.build(),
     )?;
-    let still_there = !tx
-        .execute(
-            &format!(
-                "SELECT 1 FROM {} WHERE {}{} LIMIT 1",
-                quote(table),
-                conditions.join(" AND "),
-                owner_filter(&stream),
-            ),
-            &{
-                let mut lookup = ParamsBuilder::new().set("owner_row_id", scope.owner_row_id);
-                for (index, value) in key.iter().enumerate() {
-                    lookup = lookup.set(&format!("k{index}"), value.clone());
-                }
-                lookup.build()
-            },
-        )?
-        .is_empty();
+    let still_there = !tx.execute(&lookup_sql, &lookup_params())?.is_empty();
+    let removed = if view && existed && !still_there {
+        1
+    } else {
+        removed
+    };
     if !still_there {
         tx.execute_non_query(
             "INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at) VALUES (@stream, @owner, @row_key, @deleted_at) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at = excluded.deleted_at",
@@ -607,6 +622,7 @@ impl StreamScope {
             owner_row_id,
         };
         ensure_tombstone_triggers(db, &scope)?;
+        super::favorite_views::ensure_favorite_views(db)?;
         // Copies stored before sync told them apart from repeats.
         db.write_transaction(|tx| {
             for stream in late_copies::CHECKED_WHOLE {
@@ -756,6 +772,9 @@ fn ensure_tombstone_triggers(db: &DatabaseService, scope: &StreamScope) -> Resul
     db.ensure_schema_once(&format!("remote-sync-tombstones:{}", scope.user_prefix), || {
         for spec in STATE_STREAMS {
             let table = scope.table_name(&spec.as_stream());
+            if super::favorite_views::is_favorite_view(&table) {
+                continue;
+            }
             let literal = table.replace('\'', "''");
             let key = |alias: &str| {
                 spec.key

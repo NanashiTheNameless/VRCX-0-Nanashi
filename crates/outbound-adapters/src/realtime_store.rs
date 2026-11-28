@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use vrcx_0_application_realtime::{
-    FavoriteBaselineStore, FeedQueryStore, FriendLogStore, GameLogLookup, RealtimeBatchWriter,
-    SocialMutationStore,
-};
+use vrcx_0_application_realtime::{RealtimeStore, SocialMutationStore};
 use vrcx_0_contracts::feed::{
     FeedLatestQueryInput, FeedLiveEntryInput, FeedReadModelOutput, FeedSearchQueryInput,
 };
@@ -13,7 +10,7 @@ use vrcx_0_contracts::friend_log::{
     FriendLogUpsertOptionsInput,
 };
 use vrcx_0_contracts::realtime::{RealtimePersistenceBatch, RealtimeWriteCounts};
-use vrcx_0_contracts::FavoriteRow;
+use vrcx_0_contracts::{FavoriteRow, LocalFavoriteGroup};
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 use vrcx_0_persistence::DatabaseService;
 
@@ -27,7 +24,7 @@ impl PersistenceRealtimeStore {
     }
 }
 
-impl GameLogLookup for PersistenceRealtimeStore {
+impl RealtimeStore for PersistenceRealtimeStore {
     fn game_log_join_count(
         &self,
         owner: &OwnerId,
@@ -54,9 +51,7 @@ impl GameLogLookup for PersistenceRealtimeStore {
             &self.db, world_id,
         )?)
     }
-}
 
-impl FavoriteBaselineStore for PersistenceRealtimeStore {
     fn favorite_list(
         &self,
         owner: Option<&OwnerId>,
@@ -66,9 +61,17 @@ impl FavoriteBaselineStore for PersistenceRealtimeStore {
             &self.db, owner, kind,
         )?)
     }
-}
 
-impl FriendLogStore for PersistenceRealtimeStore {
+    fn favorite_group_list(
+        &self,
+        owner: Option<&OwnerId>,
+        kind: FavoriteEntityKind,
+    ) -> crate::Result<Vec<LocalFavoriteGroup>> {
+        Ok(vrcx_0_persistence::favorites::favorite_group_list(
+            &self.db, owner, kind,
+        )?)
+    }
+
     fn friend_log_current_list(&self, user_id: &str) -> crate::Result<Vec<FriendLogCurrentOutput>> {
         Ok(vrcx_0_persistence::friends::friend_log_current_list(
             &self.db,
@@ -86,6 +89,107 @@ impl FriendLogStore for PersistenceRealtimeStore {
             user_id.to_string(),
             entries,
             options,
+        )?)
+    }
+
+    fn write_realtime_batch(
+        &self,
+        owner: &OwnerId,
+        batch: &RealtimePersistenceBatch,
+    ) -> crate::Result<RealtimeWriteCounts> {
+        Ok(vrcx_0_persistence::realtime::write_realtime_batch(
+            &self.db, owner, batch,
+        )?)
+    }
+
+    fn observe_profile_history(
+        &self,
+        owner: &OwnerId,
+        users: &[vrcx_0_core::json::RawJsonObject],
+        manually_opened: bool,
+    ) -> crate::Result<()> {
+        let observe = if manually_opened {
+            vrcx_0_persistence::profile_history::observe_snapshot
+        } else {
+            vrcx_0_persistence::profile_history::observe
+        };
+        Ok(observe(
+            &self.db,
+            owner,
+            users,
+            vrcx_0_core::time::now_epoch(),
+        )?)
+    }
+
+    fn observe_friend_profile_details(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        users: &[vrcx_0_core::json::RawJsonObject],
+    ) -> crate::Result<()> {
+        Ok(vrcx_0_persistence::friend_profile_details::observe(
+            &self.db,
+            owner,
+            endpoint,
+            users.iter().map(|user| user.as_map()),
+            vrcx_0_core::time::now_epoch(),
+        )?)
+    }
+
+    fn friend_profile_details(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_id: &str,
+    ) -> crate::Result<Option<serde_json::Value>> {
+        Ok(
+            vrcx_0_persistence::friend_profile_details::get(&self.db, owner, endpoint, user_id)?
+                .map(serde_json::Value::Object),
+        )
+    }
+
+    fn friend_profile_details_list(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_ids: &[String],
+    ) -> crate::Result<Vec<serde_json::Value>> {
+        Ok(
+            vrcx_0_persistence::friend_profile_details::list(&self.db, owner, endpoint, user_ids)?
+                .into_iter()
+                .map(serde_json::Value::Object)
+                .collect(),
+        )
+    }
+
+    fn feed_latest(
+        &self,
+        query: FeedLatestQueryInput,
+        live_entries: Vec<FeedLiveEntryInput>,
+        watermark: i64,
+        include_persisted_rows: bool,
+    ) -> crate::Result<FeedReadModelOutput> {
+        Ok(vrcx_0_persistence::feed::feed_latest_query(
+            &self.db,
+            query,
+            live_entries,
+            watermark,
+            include_persisted_rows,
+        )?)
+    }
+    fn feed_search(
+        &self,
+        query: FeedSearchQueryInput,
+        live_entries: Vec<FeedLiveEntryInput>,
+        watermark: i64,
+        include_persisted_rows: bool,
+    ) -> crate::Result<FeedReadModelOutput> {
+        Ok(vrcx_0_persistence::feed::feed_search_query(
+            &self.db,
+            query,
+            live_entries,
+            watermark,
+            include_persisted_rows,
         )?)
     }
 }
@@ -135,111 +239,6 @@ impl SocialMutationStore for PersistenceRealtimeStore {
             &self.db,
             user_id.to_string(),
             notification_id.to_string(),
-        )?)
-    }
-}
-
-impl RealtimeBatchWriter for PersistenceRealtimeStore {
-    fn observe_profile_history(
-        &self,
-        owner: &OwnerId,
-        users: &[vrcx_0_core::json::RawJsonObject],
-        manually_opened: bool,
-    ) -> crate::Result<()> {
-        let observe = if manually_opened {
-            vrcx_0_persistence::profile_history::observe_snapshot
-        } else {
-            vrcx_0_persistence::profile_history::observe
-        };
-        Ok(observe(
-            &self.db,
-            owner,
-            users,
-            vrcx_0_core::time::now_epoch(),
-        )?)
-    }
-
-    fn write_realtime_batch(
-        &self,
-        owner: &OwnerId,
-        batch: &RealtimePersistenceBatch,
-    ) -> crate::Result<RealtimeWriteCounts> {
-        Ok(vrcx_0_persistence::realtime::write_realtime_batch(
-            &self.db, owner, batch,
-        )?)
-    }
-
-    fn observe_friend_profile_details(
-        &self,
-        owner: &OwnerId,
-        endpoint: &str,
-        users: &[vrcx_0_core::json::RawJsonObject],
-    ) -> crate::Result<()> {
-        Ok(vrcx_0_persistence::friend_profile_details::observe(
-            &self.db,
-            owner,
-            endpoint,
-            users.iter().map(|user| user.as_map()),
-            vrcx_0_core::time::now_epoch(),
-        )?)
-    }
-
-    fn friend_profile_details(
-        &self,
-        owner: &OwnerId,
-        endpoint: &str,
-        user_id: &str,
-    ) -> crate::Result<Option<serde_json::Value>> {
-        Ok(
-            vrcx_0_persistence::friend_profile_details::get(&self.db, owner, endpoint, user_id)?
-                .map(serde_json::Value::Object),
-        )
-    }
-
-    fn friend_profile_details_list(
-        &self,
-        owner: &OwnerId,
-        endpoint: &str,
-        user_ids: &[String],
-    ) -> crate::Result<Vec<serde_json::Value>> {
-        Ok(
-            vrcx_0_persistence::friend_profile_details::list(&self.db, owner, endpoint, user_ids)?
-                .into_iter()
-                .map(serde_json::Value::Object)
-                .collect(),
-        )
-    }
-}
-
-impl FeedQueryStore for PersistenceRealtimeStore {
-    fn feed_latest(
-        &self,
-        query: FeedLatestQueryInput,
-        live_entries: Vec<FeedLiveEntryInput>,
-        watermark: i64,
-        include_persisted_rows: bool,
-    ) -> crate::Result<FeedReadModelOutput> {
-        Ok(vrcx_0_persistence::feed::feed_latest_query(
-            &self.db,
-            query,
-            live_entries,
-            watermark,
-            include_persisted_rows,
-        )?)
-    }
-    fn feed_search(
-        &self,
-        query: FeedSearchQueryInput,
-        live_entries: Vec<FeedLiveEntryInput>,
-        watermark: i64,
-        include_persisted_rows: bool,
-    ) -> crate::Result<FeedReadModelOutput> {
-        Ok(vrcx_0_persistence::feed::feed_search_query(
-            &self.db,
-            query,
-            live_entries,
-            watermark,
-            include_persisted_rows,
         )?)
     }
 }

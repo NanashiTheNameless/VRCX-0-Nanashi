@@ -93,7 +93,7 @@ fn start_requires_active_realtime_session() -> Result<()> {
     let runtime = Arc::new(RealtimeHostRuntime::new(
         RealtimeHostRuntimeDeps {
             config: Arc::new(store.config.clone()),
-            stores: crate::RealtimeStores::shared(store),
+            store,
             transport: Arc::new(TestRealtimeTransport),
             remote_requests: Arc::new(TestRealtimeRemoteRequests),
             event_bus: event_bus.clone(),
@@ -1028,8 +1028,7 @@ async fn load_uses_saved_profile_details_without_a_request() -> Result<()> {
     runtime
         .runtime()
         .deps
-        .stores
-        .batch_writer
+        .store
         .observe_friend_profile_details(
             &vrcx_0_core::OwnerId::new(session.user_id.clone()),
             &vrcx_0_core::vrchat_endpoints::normalize_vrchat_api_endpoint(Some(&session.endpoint)),

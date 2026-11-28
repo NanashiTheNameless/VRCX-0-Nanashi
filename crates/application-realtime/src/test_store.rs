@@ -21,7 +21,7 @@ use vrcx_0_contracts::notifications::{
 use vrcx_0_contracts::realtime::{
     FriendLogDelete, FriendLogUpsert, RealtimePersistenceBatch, RealtimeWriteCounts,
 };
-use vrcx_0_contracts::FavoriteRow;
+use vrcx_0_contracts::{FavoriteRow, LocalFavoriteGroup};
 use vrcx_0_core::friend_log::{plan_friend_log_upsert, FriendLogCurrent, FriendLogUpsertInput};
 use vrcx_0_core::json::text_of;
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
@@ -71,7 +71,7 @@ impl TestRealtimeStore {
     }
 
     pub fn friend_log_current_list(&self, user_id: &str) -> Result<Vec<FriendLogCurrentOutput>> {
-        <Self as crate::FriendLogStore>::friend_log_current_list(self, user_id)
+        <Self as crate::RealtimeStore>::friend_log_current_list(self, user_id)
     }
 
     pub fn friend_log_delete_current(
@@ -200,7 +200,7 @@ impl TestRealtimeStore {
     }
 }
 
-impl crate::GameLogLookup for TestRealtimeStore {
+impl crate::RealtimeStore for TestRealtimeStore {
     fn game_log_join_count(
         &self,
         _owner: &OwnerId,
@@ -227,9 +227,7 @@ impl crate::GameLogLookup for TestRealtimeStore {
             .cloned()
             .unwrap_or_default())
     }
-}
 
-impl crate::FavoriteBaselineStore for TestRealtimeStore {
     fn favorite_list(
         &self,
         _owner: Option<&OwnerId>,
@@ -237,9 +235,15 @@ impl crate::FavoriteBaselineStore for TestRealtimeStore {
     ) -> Result<Vec<FavoriteRow>> {
         Ok(Vec::new())
     }
-}
 
-impl crate::FriendLogStore for TestRealtimeStore {
+    fn favorite_group_list(
+        &self,
+        _owner: Option<&OwnerId>,
+        _kind: FavoriteEntityKind,
+    ) -> Result<Vec<LocalFavoriteGroup>> {
+        Ok(Vec::new())
+    }
+
     fn friend_log_current_list(&self, user_id: &str) -> Result<Vec<FriendLogCurrentOutput>> {
         Ok(self
             .state
@@ -288,6 +292,236 @@ impl crate::FriendLogStore for TestRealtimeStore {
             inserted: None,
             history_count,
         })
+    }
+
+    fn write_realtime_batch(
+        &self,
+        owner: &OwnerId,
+        batch: &RealtimePersistenceBatch,
+    ) -> Result<RealtimeWriteCounts> {
+        if owner.as_str().contains('!') {
+            return Err(Error::Custom("invalid test owner id".into()));
+        }
+        if let Some(entry) = batch.feed_entries.iter().find(|entry| {
+            matches!(
+                entry,
+                FeedLiveEntry::OnPlayerJoining { .. } | FeedLiveEntry::InstanceClosed { .. }
+            )
+        }) {
+            return Err(Error::Custom(format!(
+                "Unknown realtime feed entry type: {}",
+                entry.entry_type()
+            )));
+        }
+        let mut state = self.lock()?;
+        let owner_id = owner.as_str().to_string();
+        let mut affected = 0u64;
+        for entry in &batch.friend_log_upserts {
+            affected = affected.saturating_add(apply_friend_upsert(&mut state, &owner_id, entry));
+        }
+        for entry in &batch.friend_log_deletes {
+            affected = affected.saturating_add(apply_friend_delete(&mut state, &owner_id, entry));
+        }
+        let feeds = state.feeds.entry(owner_id.clone()).or_default();
+        for entry in &batch.feed_entries {
+            let mut entry = entry.clone();
+            entry.set_owner_user_id(owner_id.clone());
+            feeds.push(entry);
+            affected = affected.saturating_add(1);
+        }
+        for entry in &batch.notification_v1_upserts {
+            upsert_json_row(
+                state.notifications_v1.entry(owner_id.clone()).or_default(),
+                entry.clone(),
+            );
+            affected = affected.saturating_add(1);
+        }
+        for entry in &batch.notification_v2_upserts {
+            upsert_json_row(
+                state.notifications_v2.entry(owner_id.clone()).or_default(),
+                entry.clone(),
+            );
+            affected = affected.saturating_add(1);
+        }
+        for notification in &batch.app_notification_upserts {
+            let rows = state.app_notifications.entry(owner_id.clone()).or_default();
+            if !rows.iter().any(|row| row.id == notification.id) {
+                rows.push(notification.clone());
+                affected = affected.saturating_add(1);
+            }
+        }
+        for update in &batch.notification_v2_updates {
+            let rows = state.notifications_v2.entry(owner_id.clone()).or_default();
+            if let Some(row) = rows
+                .iter_mut()
+                .find(|row| value_string(row, &["id"]) == update.id)
+            {
+                if let (Some(row), Some(updates)) =
+                    (row.as_object_mut(), update.updates.as_object())
+                {
+                    row.extend(updates.clone());
+                }
+            } else if let Some(updates) = update.updates.as_object() {
+                let mut row = updates.clone();
+                row.insert("id".into(), Value::String(update.id.clone()));
+                row.entry("createdAt")
+                    .or_insert_with(|| Value::from(update.received_at));
+                row.entry("created_at")
+                    .or_insert_with(|| Value::from(update.received_at));
+                rows.push(Value::Object(row));
+            }
+        }
+        for expiration in &batch.notification_expirations {
+            set_notification_flag(
+                state.notifications_v1.entry(owner_id.clone()).or_default(),
+                &expiration.id,
+                "expired",
+            );
+            set_notification_flag(
+                state.notifications_v2.entry(owner_id.clone()).or_default(),
+                &expiration.id,
+                "expired",
+            );
+        }
+        for id in &batch.notification_seen {
+            set_notification_flag(
+                state.notifications_v1.entry(owner_id.clone()).or_default(),
+                id,
+                "seen",
+            );
+            set_notification_flag(
+                state.notifications_v2.entry(owner_id.clone()).or_default(),
+                id,
+                "seen",
+            );
+        }
+        Ok(RealtimeWriteCounts {
+            affected_count: affected,
+            game_log_affected_count: 0,
+        })
+    }
+
+    fn observe_profile_history(
+        &self,
+        owner: &OwnerId,
+        users: &[vrcx_0_core::json::RawJsonObject],
+        _manually_opened: bool,
+    ) -> Result<()> {
+        self.state
+            .lock()
+            .expect("test store lock")
+            .profile_history
+            .entry(owner.as_str().to_owned())
+            .or_default()
+            .extend_from_slice(users);
+        Ok(())
+    }
+
+    fn observe_friend_profile_details(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        users: &[vrcx_0_core::json::RawJsonObject],
+    ) -> Result<()> {
+        let mut state = self.state.lock().expect("test store lock");
+        for user in users {
+            let Some(user_id) = user.get("id").and_then(Value::as_str) else {
+                continue;
+            };
+            if !vrcx_0_core::friends::FRIEND_PROFILE_DETAIL_KEYS
+                .iter()
+                .any(|key| user.contains_key(*key))
+            {
+                continue;
+            }
+            let entry = state
+                .friend_profile_details
+                .entry((
+                    owner.as_str().to_owned(),
+                    endpoint.to_owned(),
+                    user_id.to_owned(),
+                ))
+                .or_default();
+            for key in vrcx_0_core::friends::FRIEND_PROFILE_DETAIL_KEYS {
+                if let Some(value) = user.get(*key) {
+                    entry.insert(key.to_string(), value.clone());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn friend_profile_details(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_id: &str,
+    ) -> Result<Option<Value>> {
+        let state = self.state.lock().expect("test store lock");
+        Ok(state
+            .friend_profile_details
+            .get(&(
+                owner.as_str().to_owned(),
+                endpoint.to_owned(),
+                user_id.to_owned(),
+            ))
+            .map(|details| {
+                let mut details = details.clone();
+                details.insert("id".into(), Value::String(user_id.to_owned()));
+                Value::Object(details)
+            }))
+    }
+
+    fn friend_profile_details_list(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_ids: &[String],
+    ) -> Result<Vec<Value>> {
+        Ok(user_ids
+            .iter()
+            .filter_map(|user_id| {
+                self.friend_profile_details(owner, endpoint, user_id)
+                    .ok()
+                    .flatten()
+            })
+            .collect())
+    }
+
+    fn feed_latest(
+        &self,
+        query: FeedLatestQueryInput,
+        live_entries: Vec<FeedLiveEntryInput>,
+        watermark: i64,
+        include_persisted_rows: bool,
+    ) -> Result<FeedReadModelOutput> {
+        let matcher = FeedLiveQueryMatcher::for_latest(&query);
+        self.feed_read_model(
+            &query.user_id,
+            matcher,
+            live_entries,
+            watermark,
+            include_persisted_rows,
+            query.max_rows,
+        )
+    }
+
+    fn feed_search(
+        &self,
+        query: FeedSearchQueryInput,
+        live_entries: Vec<FeedLiveEntryInput>,
+        watermark: i64,
+        include_persisted_rows: bool,
+    ) -> Result<FeedReadModelOutput> {
+        let matcher = FeedLiveQueryMatcher::for_search(&query);
+        self.feed_read_model(
+            &query.user_id,
+            matcher,
+            live_entries,
+            watermark,
+            include_persisted_rows,
+            query.max_rows,
+        )
     }
 }
 
@@ -404,241 +638,6 @@ impl crate::SocialMutationStore for TestRealtimeStore {
         Ok(())
     }
 }
-
-impl crate::RealtimeBatchWriter for TestRealtimeStore {
-    fn observe_profile_history(
-        &self,
-        owner: &OwnerId,
-        users: &[vrcx_0_core::json::RawJsonObject],
-        _manually_opened: bool,
-    ) -> Result<()> {
-        self.state
-            .lock()
-            .expect("test store lock")
-            .profile_history
-            .entry(owner.as_str().to_owned())
-            .or_default()
-            .extend_from_slice(users);
-        Ok(())
-    }
-
-    fn observe_friend_profile_details(
-        &self,
-        owner: &OwnerId,
-        endpoint: &str,
-        users: &[vrcx_0_core::json::RawJsonObject],
-    ) -> Result<()> {
-        let mut state = self.state.lock().expect("test store lock");
-        for user in users {
-            let Some(user_id) = user.get("id").and_then(Value::as_str) else {
-                continue;
-            };
-            if !vrcx_0_core::friends::FRIEND_PROFILE_DETAIL_KEYS
-                .iter()
-                .any(|key| user.contains_key(*key))
-            {
-                continue;
-            }
-            let entry = state
-                .friend_profile_details
-                .entry((
-                    owner.as_str().to_owned(),
-                    endpoint.to_owned(),
-                    user_id.to_owned(),
-                ))
-                .or_default();
-            for key in vrcx_0_core::friends::FRIEND_PROFILE_DETAIL_KEYS {
-                if let Some(value) = user.get(*key) {
-                    entry.insert(key.to_string(), value.clone());
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn friend_profile_details(
-        &self,
-        owner: &OwnerId,
-        endpoint: &str,
-        user_id: &str,
-    ) -> Result<Option<Value>> {
-        let state = self.state.lock().expect("test store lock");
-        Ok(state
-            .friend_profile_details
-            .get(&(
-                owner.as_str().to_owned(),
-                endpoint.to_owned(),
-                user_id.to_owned(),
-            ))
-            .map(|details| {
-                let mut details = details.clone();
-                details.insert("id".into(), Value::String(user_id.to_owned()));
-                Value::Object(details)
-            }))
-    }
-
-    fn friend_profile_details_list(
-        &self,
-        owner: &OwnerId,
-        endpoint: &str,
-        user_ids: &[String],
-    ) -> Result<Vec<Value>> {
-        Ok(user_ids
-            .iter()
-            .filter_map(|user_id| {
-                self.friend_profile_details(owner, endpoint, user_id)
-                    .ok()
-                    .flatten()
-            })
-            .collect())
-    }
-
-    fn write_realtime_batch(
-        &self,
-        owner: &OwnerId,
-        batch: &RealtimePersistenceBatch,
-    ) -> Result<RealtimeWriteCounts> {
-        if owner.as_str().contains('!') {
-            return Err(Error::Custom("invalid test owner id".into()));
-        }
-        if let Some(entry) = batch.feed_entries.iter().find(|entry| {
-            matches!(
-                entry,
-                FeedLiveEntry::OnPlayerJoining { .. } | FeedLiveEntry::InstanceClosed { .. }
-            )
-        }) {
-            return Err(Error::Custom(format!(
-                "Unknown realtime feed entry type: {}",
-                entry.entry_type()
-            )));
-        }
-        let mut state = self.lock()?;
-        let owner_id = owner.as_str().to_string();
-        let mut affected = 0u64;
-        for entry in &batch.friend_log_upserts {
-            affected = affected.saturating_add(apply_friend_upsert(&mut state, &owner_id, entry));
-        }
-        for entry in &batch.friend_log_deletes {
-            affected = affected.saturating_add(apply_friend_delete(&mut state, &owner_id, entry));
-        }
-        let feeds = state.feeds.entry(owner_id.clone()).or_default();
-        for entry in &batch.feed_entries {
-            let mut entry = entry.clone();
-            entry.set_owner_user_id(owner_id.clone());
-            feeds.push(entry);
-            affected = affected.saturating_add(1);
-        }
-        for entry in &batch.notification_v1_upserts {
-            upsert_json_row(
-                state.notifications_v1.entry(owner_id.clone()).or_default(),
-                entry.clone(),
-            );
-            affected = affected.saturating_add(1);
-        }
-        for entry in &batch.notification_v2_upserts {
-            upsert_json_row(
-                state.notifications_v2.entry(owner_id.clone()).or_default(),
-                entry.clone(),
-            );
-            affected = affected.saturating_add(1);
-        }
-        for notification in &batch.app_notification_upserts {
-            let rows = state.app_notifications.entry(owner_id.clone()).or_default();
-            if !rows.iter().any(|row| row.id == notification.id) {
-                rows.push(notification.clone());
-                affected = affected.saturating_add(1);
-            }
-        }
-        for update in &batch.notification_v2_updates {
-            let rows = state.notifications_v2.entry(owner_id.clone()).or_default();
-            if let Some(row) = rows
-                .iter_mut()
-                .find(|row| value_string(row, &["id"]) == update.id)
-            {
-                if let (Some(row), Some(updates)) =
-                    (row.as_object_mut(), update.updates.as_object())
-                {
-                    row.extend(updates.clone());
-                }
-            } else if let Some(updates) = update.updates.as_object() {
-                let mut row = updates.clone();
-                row.insert("id".into(), Value::String(update.id.clone()));
-                row.entry("createdAt")
-                    .or_insert_with(|| Value::from(update.received_at));
-                row.entry("created_at")
-                    .or_insert_with(|| Value::from(update.received_at));
-                rows.push(Value::Object(row));
-            }
-        }
-        for expiration in &batch.notification_expirations {
-            set_notification_flag(
-                state.notifications_v1.entry(owner_id.clone()).or_default(),
-                &expiration.id,
-                "expired",
-            );
-            set_notification_flag(
-                state.notifications_v2.entry(owner_id.clone()).or_default(),
-                &expiration.id,
-                "expired",
-            );
-        }
-        for id in &batch.notification_seen {
-            set_notification_flag(
-                state.notifications_v1.entry(owner_id.clone()).or_default(),
-                id,
-                "seen",
-            );
-            set_notification_flag(
-                state.notifications_v2.entry(owner_id.clone()).or_default(),
-                id,
-                "seen",
-            );
-        }
-        Ok(RealtimeWriteCounts {
-            affected_count: affected,
-            game_log_affected_count: 0,
-        })
-    }
-}
-
-impl crate::FeedQueryStore for TestRealtimeStore {
-    fn feed_latest(
-        &self,
-        query: FeedLatestQueryInput,
-        live_entries: Vec<FeedLiveEntryInput>,
-        watermark: i64,
-        include_persisted_rows: bool,
-    ) -> Result<FeedReadModelOutput> {
-        let matcher = FeedLiveQueryMatcher::for_latest(&query);
-        self.feed_read_model(
-            &query.user_id,
-            matcher,
-            live_entries,
-            watermark,
-            include_persisted_rows,
-            query.max_rows,
-        )
-    }
-
-    fn feed_search(
-        &self,
-        query: FeedSearchQueryInput,
-        live_entries: Vec<FeedLiveEntryInput>,
-        watermark: i64,
-        include_persisted_rows: bool,
-    ) -> Result<FeedReadModelOutput> {
-        let matcher = FeedLiveQueryMatcher::for_search(&query);
-        self.feed_read_model(
-            &query.user_id,
-            matcher,
-            live_entries,
-            watermark,
-            include_persisted_rows,
-            query.max_rows,
-        )
-    }
-}
-
 impl TestRealtimeStore {
     fn feed_read_model(
         &self,

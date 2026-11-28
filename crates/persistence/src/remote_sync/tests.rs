@@ -1324,3 +1324,82 @@ fn older_bookkeeping_tables_are_rebuilt_without_rowid_keeping_every_row() {
         .unwrap()
         .is_empty());
 }
+
+#[test]
+fn favorites_travel_as_flat_rows_through_the_id_tables() {
+    use crate::favorites::{favorite_group_list, favorite_group_rename, favorite_remove};
+    use vrcx_0_core::FavoriteEntityKind;
+
+    let (_dir, db, scope) = setup("state-favorites");
+    let vault = vault();
+    let spec = state_spec("favorite_world").unwrap();
+    let rows = chunk(
+        "favorite_world",
+        vec![
+            json!({ "created_at": "2026-01-01T00:00:00.000Z", "world_id": "wrld_1", "group_name": "Chill", "sort_order": null }),
+            json!({ "created_at": 1767312000, "world_id": "wrld_2", "group_name": "Chill", "sort_order": null }),
+        ],
+    );
+    assert_eq!(
+        import_chunk(&db, &scope, source(&vault, "pc-a", 1, 1), &rows)
+            .unwrap()
+            .inserted,
+        2
+    );
+    let groups = favorite_group_list(&db, None, FavoriteEntityKind::World).unwrap();
+    assert_eq!(
+        groups
+            .iter()
+            .map(|group| group.name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Chill"]
+    );
+    assert_eq!(
+        export_state(&db, &scope, spec).unwrap().rows,
+        vec![
+            json!({ "created_at": 1767225600, "world_id": "wrld_1", "group_name": "Chill", "sort_order": null }),
+            json!({ "created_at": 1767312000, "world_id": "wrld_2", "group_name": "Chill", "sort_order": null }),
+        ]
+    );
+
+    favorite_remove(
+        &db,
+        None,
+        FavoriteEntityKind::World,
+        "wrld_1".into(),
+        groups[0].id,
+    )
+    .unwrap();
+    favorite_group_rename(&db, None, FavoriteEntityKind::World, groups[0].id, "Calm").unwrap();
+    let exported = export_state(&db, &scope, spec).unwrap();
+    assert_eq!(
+        exported.rows,
+        vec![
+            json!({ "created_at": 1767312000, "world_id": "wrld_2", "group_name": "Calm", "sort_order": null })
+        ]
+    );
+    let mut deleted_keys = exported
+        .deleted
+        .iter()
+        .map(|entry| entry["key"].clone())
+        .collect::<Vec<_>>();
+    deleted_keys.sort_by_key(Value::to_string);
+    assert_eq!(
+        deleted_keys,
+        vec![json!(["wrld_1", "Chill"]), json!(["wrld_2", "Chill"])]
+    );
+
+    // Another PC's deletion removes the favorite and keeps the group.
+    let deletion = chunk(
+        "favorite_world#deleted",
+        vec![json!({ "key": ["wrld_2", "Calm"], "deletedAt": 1893456000 })],
+    );
+    import_chunk(&db, &scope, source(&vault, "pc-a", 2, 2), &deletion).unwrap();
+    assert!(export_state(&db, &scope, spec).unwrap().rows.is_empty());
+    assert_eq!(
+        favorite_group_list(&db, None, FavoriteEntityKind::World)
+            .unwrap()
+            .len(),
+        1
+    );
+}

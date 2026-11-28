@@ -101,9 +101,9 @@ export function ContextRulesTab({
         () =>
             createGroupOptions({
                 remoteGroups: favoriteWorldGroups,
-                localGroups: localWorldFavorites.groupNames
+                localGroups: localWorldFavorites.groups
             }),
-        [favoriteWorldGroups, localWorldFavorites.groupNames]
+        [favoriteWorldGroups, localWorldFavorites.groups]
     );
     const instanceOptions = useMemo(
         () => createInstanceOptions(instanceTypes, t),

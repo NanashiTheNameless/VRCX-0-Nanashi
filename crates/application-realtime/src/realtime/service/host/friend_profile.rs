@@ -94,11 +94,10 @@ impl RealtimeHostRuntime {
         {
             return;
         }
-        if let Err(error) =
-            self.deps
-                .stores
-                .batch_writer
-                .observe_profile_history(owner, users, manually_opened)
+        if let Err(error) = self
+            .deps
+            .store
+            .observe_profile_history(owner, users, manually_opened)
         {
             tracing::warn!(error = %error, "Profile history persistence failed");
         }
@@ -346,7 +345,7 @@ impl RealtimeHostRuntime {
             .filter(|id| !cached_ids.contains(id.as_str()))
             .collect();
         if !missing.is_empty() {
-            match self.deps.stores.batch_writer.friend_profile_details_list(
+            match self.deps.store.friend_profile_details_list(
                 &vrcx_0_core::OwnerId::new(owner),
                 &storage_endpoint,
                 &missing,
@@ -397,17 +396,18 @@ impl RealtimeHostRuntime {
         friend_ids: &[String],
     ) -> Vec<RawJsonObject> {
         let storage_endpoint = normalize_vrchat_api_endpoint(Some(endpoint));
-        let saved = match self.deps.stores.batch_writer.friend_profile_details_list(
-            owner,
-            &storage_endpoint,
-            friend_ids,
-        ) {
-            Ok(saved) => saved,
-            Err(error) => {
-                tracing::warn!(error = %error, "Friend profile details restore failed");
-                return Vec::new();
-            }
-        };
+        let saved =
+            match self
+                .deps
+                .store
+                .friend_profile_details_list(owner, &storage_endpoint, friend_ids)
+            {
+                Ok(saved) => saved,
+                Err(error) => {
+                    tracing::warn!(error = %error, "Friend profile details restore failed");
+                    return Vec::new();
+                }
+            };
         saved
             .iter()
             .filter_map(|details| {
@@ -477,8 +477,7 @@ impl RealtimeHostRuntime {
         for (endpoint, (users, keys)) in by_endpoint {
             if let Err(error) = self
                 .deps
-                .stores
-                .batch_writer
+                .store
                 .observe_friend_profile_details(&owner, &endpoint, &users)
             {
                 self.user_facts.forget_saved_profile_details(&keys);
@@ -669,7 +668,7 @@ impl RealtimeHostRuntime {
             return false;
         };
         let owner = vrcx_0_core::OwnerId::new(scope.current_user_id.clone());
-        let details = match self.deps.stores.batch_writer.friend_profile_details(
+        let details = match self.deps.store.friend_profile_details(
             &owner,
             &normalize_vrchat_api_endpoint(Some(&session_endpoint)),
             user_id,

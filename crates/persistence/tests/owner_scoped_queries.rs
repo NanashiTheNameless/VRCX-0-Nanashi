@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 
 const OWNER_TABLES: &[&str] = &[
     "assistant_session",
-    "favorite_friend",
     "favorite_group_collection",
     "gamelog_event",
     "gamelog_external",
@@ -14,6 +13,7 @@ const OWNER_TABLES: &[&str] = &[
     "gamelog_resource_load",
     "gamelog_video_play",
     "remote_sync_tombstone",
+    "vrcx0_favorite_group",
 ];
 
 const OWNER_FILTER_EXCEPTIONS: &[(&str, &str)] = &[
@@ -39,10 +39,22 @@ const OWNER_FILTER_EXCEPTIONS: &[(&str, &str)] = &[
     // Scans every owner's leave rows and reuses each row's own owner_id for the location lookup.
     ("src/database/maintenance/leave_location_repair.rs", "select id, created_at, time, owner_id, user_id, display_name from gamelog_join_leave"),
     ("src/database/maintenance/leave_location_repair.rs", "update gamelog_join_leave set location = @location where id = @id"),
-    // Duplicate probe before building a unique index that already includes owner_id.
-    ("src/database/schema.rs", "select 1 from {table} where {non_null_columns}"),
+
+    // Local favorite group writes are keyed by group id after visible_group checked the owner in the same transaction.
+    ("src/favorites.rs", "delete from vrcx0_favorite_group where id = @group_id"),
+    ("src/favorites.rs", "update vrcx0_favorite_group set name = @name where id = @group_id"),
+    ("src/favorites.rs", "update vrcx0_favorite_group set sort_order = @sort_order where id = @group_id"),
+    // Migration 1 seeds and verifies every owner's local favorite groups at once.
+    ("src/favorites/migration_v1.rs", "select 1 from vrcx0_favorite_group limit 1"),
+    ("src/favorites/migration_v1.rs", "select {owner_sql}, group_name, {column}, created_at, {sort_sql} from {table} order by id"),
+    // Profile merge copies another database's tables whole and remaps owner ids while copying.
+    ("src/profile_merge.rs", "insert or ignore into main.{table} ({column_list}) select {select_list} from {from}"),
+    ("src/profile_merge.rs", "select 1 from {schema}.sqlite_master where type = 'table' and name = ?1"),
+    ("src/favorites/migration_v1.rs", "select g.kind, g.owner_id, g.name, i.entity_id from vrcx0_favorite_item i join vrcx0_favorite_group g on g.id = i.group_id"),
+    ("src/favorites/migration_v1.rs", "select kind, owner_id, name from vrcx0_favorite_group"),
     // Claims shared pre-upgrade rows (owner_id = 0) for the only local account.
     ("src/game_log/legacy_ownership.rs", "update {table} set owner_id = @owner_id where owner_id = 0"),
+    ("src/game_log/legacy_ownership.rs", "update vrcx0_favorite_group set owner_id = @owner_id, sort_order = sort_order + @offset where kind = 'friend' and owner_id = 0"),
     // Machine replay cursor: the latest location row from any owner.
     ("src/game_log/query.rs", "fn last_location_sql: sea-query from(gamelog_location)"),
     // (created_at, video_url) is the machine-global unique key of a video play row.
@@ -51,6 +63,10 @@ const OWNER_FILTER_EXCEPTIONS: &[(&str, &str)] = &[
     ("src/realtime/query.rs", "select world_name from gamelog_location where world_id = @world_id"),
     // The restore trigger scopes by the restored row's own owner, formatted in as `owner_id = {}`.
     ("src/remote_sync/streams.rs", "after insert on {} begin delete from remote_sync_tombstone where stream = '{literal}' and owner_id = {}"),
+    // Favorite tombstone triggers record each row under its own group's owner.
+    ("src/remote_sync/favorite_views.rs", "create trigger if not exists remote_sync_deleted_vrcx0_favorite_item"),
+    ("src/remote_sync/favorite_views.rs", "create trigger if not exists remote_sync_restored_vrcx0_favorite_item"),
+    ("src/remote_sync/favorite_views.rs", "create trigger if not exists remote_sync_renamed_vrcx0_favorite_group"),
     // Synced app settings belong to the machine, stored with owner_id = 0.
     ("src/remote_sync/streams.rs", "select row_key, deleted_at from remote_sync_tombstone where stream = @stream and owner_id = 0"),
 ];

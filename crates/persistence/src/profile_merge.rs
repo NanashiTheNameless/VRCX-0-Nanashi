@@ -149,6 +149,129 @@ fn select_expression(column: &str, owner_map: bool) -> String {
     }
 }
 
+/// Favorite tables merged by `merge_favorites`. The old flat tables are kept
+/// only as upstream's backup; once a profile is upgraded its favorites live in
+/// the id tables, whose ids mean nothing in another database.
+const FAVORITE_TABLES: [&str; 5] = [
+    "favorite_world",
+    "favorite_avatar",
+    "favorite_friend",
+    "vrcx0_favorite_group",
+    "vrcx0_favorite_item",
+];
+
+/// Adds the other profile's local favorite groups (matched by kind, owner and
+/// name) and their favorites. Existing groups and favorites are kept as they are.
+fn merge_favorites(conn: &Connection, owner_map: bool) -> Result<u64, Error> {
+    const GROUPS: &str = "vrcx0_favorite_group";
+    const ITEMS: &str = "vrcx0_favorite_item";
+    if !table_exists_in(conn, SOURCE_SCHEMA, GROUPS)?
+        || !table_exists_in(conn, SOURCE_SCHEMA, ITEMS)?
+        || !main_table_exists(conn, GROUPS)?
+        || !main_table_exists(conn, ITEMS)?
+    {
+        return Ok(0);
+    }
+    let mut added = 0u64;
+    let mut group_ids = std::collections::HashMap::new();
+    let groups = {
+        let mut statement = conn
+            .prepare(&format!(
+                "SELECT s.id, s.kind, {}, s.name, {} FROM {SOURCE_SCHEMA}.{GROUPS} AS s ORDER BY s.kind, s.owner_id, s.sort_order, s.id",
+                select_expression("owner_id", owner_map),
+                select_expression("created_at", owner_map),
+            ))
+            .map_err(Error::sqlite)?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, Option<i64>>(4)?,
+                ))
+            })
+            .map_err(Error::sqlite)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Error::sqlite)?
+    };
+    for (source_id, kind, owner_id, name, created_at) in groups {
+        let realm = if kind == "friend" && owner_id != 0 {
+            "owner_id IN (0, ?3)"
+        } else {
+            "owner_id = ?3"
+        };
+        let existing = conn
+            .query_row(
+                &format!(
+                    "SELECT id FROM main.{GROUPS} WHERE kind = ?1 AND name = ?2 AND {realm} ORDER BY owner_id = ?3 DESC LIMIT 1"
+                ),
+                rusqlite::params![kind, name, owner_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()
+            .map_err(Error::sqlite)?;
+        let group_id = match existing {
+            Some(id) => id,
+            None => {
+                conn.execute(
+                    &format!(
+                        "INSERT INTO main.{GROUPS} (kind, owner_id, name, sort_order, created_at) SELECT ?1, ?2, ?3, COALESCE(MAX(sort_order) + 1, 0), ?4 FROM main.{GROUPS} WHERE kind = ?1 AND owner_id = ?2"
+                    ),
+                    rusqlite::params![
+                        kind,
+                        owner_id,
+                        name,
+                        created_at.unwrap_or_else(vrcx_0_core::time::now_epoch)
+                    ],
+                )
+                .map_err(Error::sqlite)?;
+                added += 1;
+                conn.last_insert_rowid()
+            }
+        };
+        group_ids.insert(source_id, group_id);
+    }
+    let items = {
+        let mut statement = conn
+            .prepare(&format!(
+                "SELECT s.group_id, s.entity_id, s.sort_order, {} FROM {SOURCE_SCHEMA}.{ITEMS} AS s ORDER BY s.id",
+                select_expression("created_at", owner_map),
+            ))
+            .map_err(Error::sqlite)?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<i64>>(2)?,
+                    row.get::<_, Option<i64>>(3)?,
+                ))
+            })
+            .map_err(Error::sqlite)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Error::sqlite)?
+    };
+    for (source_group, entity_id, sort_order, created_at) in items {
+        let Some(group_id) = group_ids.get(&source_group) else {
+            continue;
+        };
+        added += conn
+            .execute(
+                &format!(
+                    "INSERT OR IGNORE INTO main.{ITEMS} (group_id, entity_id, sort_order, created_at) VALUES (?1, ?2, ?3, ?4)"
+                ),
+                rusqlite::params![
+                    group_id,
+                    entity_id,
+                    sort_order,
+                    created_at.unwrap_or_else(vrcx_0_core::time::now_epoch)
+                ],
+            )
+            .map_err(Error::sqlite)? as u64;
+    }
+    Ok(added)
+}
+
 fn merge_configs(conn: &Connection) -> Result<u64, Error> {
     let mut statement = conn
         .prepare(&format!("SELECT key, value FROM {SOURCE_SCHEMA}.configs"))
@@ -484,6 +607,9 @@ pub fn merge_profile_database(
             let mut report = ProfileMergeReport::default();
             let owner_map = build_owner_map(conn)?;
             for (table, sql) in source_tables(conn)? {
+                if FAVORITE_TABLES.contains(&table.as_str()) {
+                    continue;
+                }
                 if is_skipped_table(&table) {
                     report.skipped_tables.push(table);
                     continue;
@@ -513,6 +639,11 @@ pub fn merge_profile_database(
                 if added > 0 {
                     report.per_table.insert(table, added);
                 }
+            }
+            let favorites = merge_favorites(conn, owner_map)?;
+            if favorites > 0 {
+                report.rows_added += favorites;
+                report.per_table.insert("favorites".into(), favorites);
             }
             Ok::<_, Error>(report)
         })();
@@ -549,7 +680,8 @@ mod tests {
         CREATE TABLE configs (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE owners (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL UNIQUE);
         CREATE TABLE memos (user_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT);
-        CREATE TABLE favorite_friend (id INTEGER PRIMARY KEY, created_at INTEGER, user_id TEXT, group_name TEXT, owner_id INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE vrcx0_favorite_group (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, name TEXT NOT NULL, sort_order INTEGER NOT NULL, created_at INTEGER NOT NULL, UNIQUE (kind, owner_id, name));
+        CREATE TABLE vrcx0_favorite_item (id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER NOT NULL, entity_id TEXT NOT NULL, sort_order INTEGER, created_at INTEGER NOT NULL, UNIQUE (group_id, entity_id));
         CREATE TABLE cache_world (id TEXT PRIMARY KEY, name TEXT);
         CREATE TABLE cookies (key TEXT PRIMARY KEY, value TEXT);
     ";
@@ -565,7 +697,8 @@ mod tests {
              INSERT INTO configs VALUES ('theme', 'dark');
              INSERT INTO configs VALUES ('VRCX_0_databaseVersion', '40');
              INSERT INTO memos VALUES ('usr_a', '1', 'mine');
-             INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES (1000, 'usr_a', 'G', 1);",
+             INSERT INTO vrcx0_favorite_group (kind, owner_id, name, sort_order, created_at) VALUES ('friend', 1, 'G', 0, 1000);
+             INSERT INTO vrcx0_favorite_item (group_id, entity_id, created_at) VALUES (1, 'usr_a', 1000);",
         )
         .unwrap();
 
@@ -580,8 +713,11 @@ mod tests {
                  INSERT INTO configs VALUES ('VRCX_0_databaseVersion', '12');
                  INSERT INTO memos VALUES ('usr_a', '2', 'theirs');
                  INSERT INTO memos VALUES ('usr_b', '2026-10-09T00:00:00.000Z', 'new memo');
-                 INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES (1000, 'usr_a', 'G', 2);
-                 INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES (2000, 'usr_b', 'G', 2);
+                 INSERT INTO vrcx0_favorite_group (kind, owner_id, name, sort_order, created_at) VALUES ('world', 0, 'W', 0, 500);
+                 INSERT INTO vrcx0_favorite_group (kind, owner_id, name, sort_order, created_at) VALUES ('friend', 2, 'G', 0, 1000);
+                 INSERT INTO vrcx0_favorite_item (group_id, entity_id, created_at) VALUES (1, 'wrld_1', 500);
+                 INSERT INTO vrcx0_favorite_item (group_id, entity_id, created_at) VALUES (2, 'usr_a', 1000);
+                 INSERT INTO vrcx0_favorite_item (group_id, entity_id, created_at) VALUES (2, 'usr_b', 2000);
                  INSERT INTO cache_world VALUES ('wrld_1', 'cached');
                  INSERT INTO cookies VALUES ('auth', 'secret');
                  CREATE TABLE usrother_feed_gps (id INTEGER PRIMARY KEY, created_at INTEGER, location TEXT);
@@ -616,11 +752,17 @@ mod tests {
             count("SELECT edited_at FROM memos WHERE user_id = 'usr_b'"),
             1791504000
         );
-        // usr_me is owner 1 here and 2 in the source: duplicate skipped, new row remapped.
-        assert_eq!(count("SELECT COUNT(*) FROM favorite_friend"), 2);
+        // usr_me is owner 1 here and 2 in the source: duplicate skipped, new
+        // favorite lands in the matching group, and groups get ids of their own.
+        assert_eq!(count("SELECT COUNT(*) FROM vrcx0_favorite_item"), 3);
+        assert_eq!(count("SELECT COUNT(*) FROM vrcx0_favorite_group"), 2);
         assert_eq!(
-            count("SELECT owner_id FROM favorite_friend WHERE user_id = 'usr_b'"),
+            count("SELECT g.owner_id FROM vrcx0_favorite_item i JOIN vrcx0_favorite_group g ON g.id = i.group_id WHERE i.entity_id = 'usr_b'"),
             1
+        );
+        assert_eq!(
+            value("SELECT g.name FROM vrcx0_favorite_item i JOIN vrcx0_favorite_group g ON g.id = i.group_id WHERE i.entity_id = 'wrld_1'"),
+            "W"
         );
         assert_eq!(count("SELECT COUNT(*) FROM owners"), 2);
         assert_eq!(count("SELECT COUNT(*) FROM cache_world"), 0);

@@ -14,6 +14,7 @@ pub const CHATBOX_MANUAL_HOLD: Duration = Duration::from_secs(8);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ChatboxPauseReason {
+    Disabled,
     GameNotRunning,
     Isolated,
 }
@@ -173,10 +174,7 @@ impl ChatboxScheduler {
             .unwrap_or_default();
         let (outgoing, pause_reason) = match input.gate {
             ChatboxGate::Ready => (self.outgoing(now, display), None),
-            ChatboxGate::Paused(reason) => {
-                self.last_sent = None;
-                (None, Some(reason))
-            }
+            ChatboxGate::Paused(reason) => (self.clear_on_pause(now), Some(reason)),
         };
         ChatboxTickOutput {
             outgoing,
@@ -230,6 +228,18 @@ impl ChatboxScheduler {
     pub fn restart_rotation(&mut self) {
         self.rotation_index = 0;
         self.page_started_at = None;
+    }
+
+    fn clear_on_pause(&mut self, now: Instant) -> Option<String> {
+        let last = self.last_sent.take()?;
+        if last.text.is_empty() {
+            return None;
+        }
+        if now.saturating_duration_since(last.at) < CHATBOX_MIN_SEND_INTERVAL {
+            self.last_sent = Some(last);
+            return None;
+        }
+        Some(String::new())
     }
 
     fn outgoing(&mut self, now: Instant, display: Option<String>) -> Option<String> {
